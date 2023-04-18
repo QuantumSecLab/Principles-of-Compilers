@@ -13,8 +13,9 @@
 typedef enum
 {
 	START, INASSIGN, INCOMMENT, INNUM, INID, DONE, 
-	INMULTILINECOMMENT_1, INMULTILINECOMMENT_2, INMULTILINECOMMENT_3,
-	INFLOAT
+	IN_MULTILINE_COMMENT_1, IN_MULTILINE_COMMENT_2, IN_MULTILINE_COMMENT_3, /* states of DFA for c-style multiline comments */
+	IN_UPPER_HALF_FLOAT,                                                    /* states of DFA for float numbers which at least have the upper half */
+	IN_LOWER_HALF_FLOAT_1, IN_LOWER_HALF_FLOAT_2                            /* states of DFA for float numbers which only have the lower half */
 }
 StateType;
 
@@ -47,6 +48,7 @@ static int getNextChar(void)
 		}
 		else
 		{
+			linepos = 0;
 			EOF_flag = TRUE;
 			return EOF;
 		}
@@ -117,6 +119,10 @@ TokenType getToken(void)
 				save = FALSE;
 				state = INCOMMENT;
 			}
+			else if (c == '.')
+			{
+				state = IN_LOWER_HALF_FLOAT_1;
+			}
 			else
 			{
 				state = DONE;
@@ -144,7 +150,7 @@ TokenType getToken(void)
 				case '/':
 					if (linepos < bufsize && lineBuf[linepos] == '*')
 					{
-						state = INMULTILINECOMMENT_1;
+						state = IN_MULTILINE_COMMENT_1;
 						save = FALSE;
 					}
 					else currentToken = OVER;
@@ -189,7 +195,7 @@ TokenType getToken(void)
 			{
 				if (c == '.')
 				{
-					state = INFLOAT;
+					state = IN_UPPER_HALF_FLOAT;
 				}
 				else
 				{
@@ -210,18 +216,18 @@ TokenType getToken(void)
 				currentToken = ID;
 			}
 			break;
-		case INMULTILINECOMMENT_1:
+		case IN_MULTILINE_COMMENT_1:
 			save = FALSE;
 			if (c == '*')
 			{
-				state = INMULTILINECOMMENT_2;
+				state = IN_MULTILINE_COMMENT_2;
 			}
 			else if (c == EOF)
 			{
 				/* should never happen */
 				state = DONE;
 				currentToken = ENDFILE;
-				fprintf(listing, "\t%d: ERROR: Non-terminated comment.\n", lineno);
+				fprintf(listing, "\t(%d, %d): ERROR: Non-terminated comment.\n", lineno, linepos);
 			}
 			else
 			{
@@ -229,27 +235,27 @@ TokenType getToken(void)
 				ungetNextChar();
 				state = DONE;
 				currentToken = ERROR;
-				fprintf(listing, "\t%d: ERROR: Bad multi-line comment.\n", lineno);
+				fprintf(listing, "\t(%d, %d): ERROR: Bad multi-line comment.\n", lineno, linepos);
 			}
 			break;
-		case INMULTILINECOMMENT_2:
-			save == FALSE;
+		case IN_MULTILINE_COMMENT_2:
+			save = FALSE;
 			if (c == '*')
 			{
-				state = INMULTILINECOMMENT_3;
+				state = IN_MULTILINE_COMMENT_3;
 			}
 			else if (c == EOF)
 			{
 				state = DONE;
 				currentToken = ENDFILE;
-				fprintf(listing, "\t%d: ERROR: Non-terminated comment.\n", lineno);
+				fprintf(listing, "\t(%d, %d): ERROR: Non-terminated comment.\n", lineno, linepos);
 			}
 			else
 			{
-				state = INMULTILINECOMMENT_2;
+				state = IN_MULTILINE_COMMENT_2;
 			}
 			break;
-		case INMULTILINECOMMENT_3:
+		case IN_MULTILINE_COMMENT_3:
 			save = FALSE;
 			if (c == '/')
 			{
@@ -257,17 +263,60 @@ TokenType getToken(void)
 			}
 			else if (c == '*')
 			{
-				state = INMULTILINECOMMENT_3;
+				state = IN_MULTILINE_COMMENT_3;
 			}
 			else if (c == EOF)
 			{
 				state = DONE;
 				currentToken = ENDFILE;
-				fprintf(listing, "\t%d: ERROR: Non-terminated comment.\n", lineno);
+				fprintf(listing, "\t(%d, %d): ERROR: Non-terminated comment.\n", lineno, linepos);
 			}
 			else
 			{
-				state = INMULTILINECOMMENT_2;
+				state = IN_MULTILINE_COMMENT_2;
+			}
+			break;
+		case IN_UPPER_HALF_FLOAT:
+			if (!isdigit(c))
+			{
+				/* backup the input */
+				ungetNextChar();
+				save = FALSE;
+				state = DONE;
+				currentToken = FLOATNUM;
+			}
+			else
+			{
+				state = IN_UPPER_HALF_FLOAT;
+			}
+			break;
+		case IN_LOWER_HALF_FLOAT_1:
+			if (!isdigit(c))
+			{
+				/* backup the input */
+				ungetNextChar();
+				save = FALSE;
+				state = DONE;
+				currentToken = ERROR;
+				fprintf(listing, "\t(%d, %d): ERROR: Invalid float number. Expected at least one digit at the either side of the dot.\n", lineno, linepos);
+			}
+			else
+			{
+				state = IN_LOWER_HALF_FLOAT_2;
+			}
+			break;
+		case IN_LOWER_HALF_FLOAT_2:
+			if (!isdigit(c))
+			{
+				/* backup the input */
+				ungetNextChar();
+				save = FALSE;
+				state = DONE;
+				currentToken = FLOATNUM;
+			}
+			else
+			{
+				state = IN_LOWER_HALF_FLOAT_2;
 			}
 			break;
 		default: /* should never happen */
