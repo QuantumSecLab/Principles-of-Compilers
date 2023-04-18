@@ -221,6 +221,7 @@ TokenType getToken(void)
 				/* should never happen */
 				state = DONE;
 				currentToken = ENDFILE;
+				fprintf(listing, "\t%d: ERROR: Non-terminated comment.\n", lineno);
 			}
 			else
 			{
@@ -228,6 +229,7 @@ TokenType getToken(void)
 				ungetNextChar();
 				state = DONE;
 				currentToken = ERROR;
+				fprintf(listing, "\t%d: ERROR: Bad multi-line comment.\n", lineno);
 			}
 			break;
 		case INMULTILINECOMMENT_2:
@@ -240,6 +242,7 @@ TokenType getToken(void)
 			{
 				state = DONE;
 				currentToken = ENDFILE;
+				fprintf(listing, "\t%d: ERROR: Non-terminated comment.\n", lineno);
 			}
 			else
 			{
@@ -260,6 +263,7 @@ TokenType getToken(void)
 			{
 				state = DONE;
 				currentToken = ENDFILE;
+				fprintf(listing, "\t%d: ERROR: Non-terminated comment.\n", lineno);
 			}
 			else
 			{
