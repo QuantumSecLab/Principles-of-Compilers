@@ -48,7 +48,7 @@ static int getNextChar(void)
 		}
 		else
 		{
-			linepos = 0;
+			//linepos = 0;
 			EOF_flag = TRUE;
 			return EOF;
 		}
@@ -196,6 +196,15 @@ TokenType getToken(void)
 				if (c == '.')
 				{
 					state = IN_UPPER_HALF_FLOAT;
+				}
+				else if (isalpha(c))
+				{
+					/* backup in the input */
+					ungetNextChar();
+					save = FALSE;
+					state = DONE;
+					currentToken = ERROR;
+					fprintf(listing, "\t(%d, %d): ERROR: Invalid unsigned integer.\n", lineno, linepos);
 				}
 				else
 				{
