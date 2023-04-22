@@ -13,9 +13,10 @@
 typedef enum
 {
 	START, INASSIGN, INCOMMENT, INNUM, INID, DONE, 
-	IN_MULTILINE_COMMENT_1, IN_MULTILINE_COMMENT_2, IN_MULTILINE_COMMENT_3, /* states of DFA for c-style multiline comments */
-	IN_UPPER_HALF_FLOAT,                                                    /* states of DFA for float numbers which at least have the upper half */
-	IN_LOWER_HALF_FLOAT_1, IN_LOWER_HALF_FLOAT_2                            /* states of DFA for float numbers which only have the lower half */
+	DIV_OR_MULTILINE_COMMENT,                       /* Add an intermediate state when it comes to '/' to make the code more human-readable */
+	IN_MULTILINE_COMMENT_1, IN_MULTILINE_COMMENT_2, /* states of DFA for c-style multiline comments */
+	IN_UPPER_HALF_FLOAT,                            /* states of DFA for float numbers which at least have the upper half */
+	IN_LOWER_HALF_FLOAT_1, IN_LOWER_HALF_FLOAT_2    /* states of DFA for float numbers which only have the lower half */
 }
 StateType;
 
@@ -41,14 +42,15 @@ static int getNextChar(void)
 		lineno++;
 		if (fgets(lineBuf, BUFLEN - 1, source))
 		{
-			if (EchoSource) fprintf(listing, "%4d: %s", lineno, lineBuf);
+			if (lineBuf[strlen(lineBuf) - 1] == '\n') lineBuf[strlen(lineBuf) - 1] = '\0';
+			if (EchoSource) fprintf(listing, "%4d: %s\n", lineno, lineBuf);
 			bufsize = strlen(lineBuf);
 			linepos = 0;
 			return lineBuf[linepos++];
 		}
 		else
 		{
-			//linepos = 0;
+			// linepos = 0; // infinite loop!
 			EOF_flag = TRUE;
 			return EOF;
 		}
@@ -148,12 +150,7 @@ TokenType getToken(void)
 					currentToken = TIMES;
 					break;
 				case '/':
-					if (linepos < bufsize && lineBuf[linepos] == '*')
-					{
-						state = IN_MULTILINE_COMMENT_1;
-						save = FALSE;
-					}
-					else currentToken = OVER;
+					state = DIV_OR_MULTILINE_COMMENT;
 					break;
 				case '(':
 					currentToken = LPAREN;
@@ -204,7 +201,7 @@ TokenType getToken(void)
 					save = FALSE;
 					state = DONE;
 					currentToken = ERROR;
-					fprintf(listing, "\t(%d, %d): ERROR: Invalid unsigned integer.\n", lineno, linepos);
+					fprintf(listing, "\t(%d, %d): ERROR: Invalid unsigned integer.\n", lineno - 1, linepos);
 				}
 				else
 				{
@@ -225,6 +222,21 @@ TokenType getToken(void)
 				currentToken = ID;
 			}
 			break;
+		case DIV_OR_MULTILINE_COMMENT:
+			if (c == '*')
+			{
+				save = FALSE;
+				state = IN_MULTILINE_COMMENT_1;
+				memset(tokenString, 0, MAXTOKENLEN + 1);
+			}
+			else
+			{
+				ungetNextChar();
+				state = DONE;
+				save = FALSE;
+				currentToken = OVER;
+			}
+			break;
 		case IN_MULTILINE_COMMENT_1:
 			save = FALSE;
 			if (c == '*')
@@ -233,38 +245,16 @@ TokenType getToken(void)
 			}
 			else if (c == EOF)
 			{
-				/* should never happen */
 				state = DONE;
 				currentToken = ENDFILE;
-				fprintf(listing, "\t(%d, %d): ERROR: Non-terminated comment.\n", lineno, linepos);
+				fprintf(listing, "\t(%d, %d): ERROR: Non-terminated comment.\n", lineno - 1, linepos);
 			}
 			else
 			{
-				/* should never happen */ 
-				ungetNextChar();
-				state = DONE;
-				currentToken = ERROR;
-				fprintf(listing, "\t(%d, %d): ERROR: Bad multi-line comment.\n", lineno, linepos);
+				state = IN_MULTILINE_COMMENT_1;
 			}
 			break;
 		case IN_MULTILINE_COMMENT_2:
-			save = FALSE;
-			if (c == '*')
-			{
-				state = IN_MULTILINE_COMMENT_3;
-			}
-			else if (c == EOF)
-			{
-				state = DONE;
-				currentToken = ENDFILE;
-				fprintf(listing, "\t(%d, %d): ERROR: Non-terminated comment.\n", lineno, linepos);
-			}
-			else
-			{
-				state = IN_MULTILINE_COMMENT_2;
-			}
-			break;
-		case IN_MULTILINE_COMMENT_3:
 			save = FALSE;
 			if (c == '/')
 			{
@@ -272,17 +262,17 @@ TokenType getToken(void)
 			}
 			else if (c == '*')
 			{
-				state = IN_MULTILINE_COMMENT_3;
+				state = IN_MULTILINE_COMMENT_2;
 			}
 			else if (c == EOF)
 			{
 				state = DONE;
 				currentToken = ENDFILE;
-				fprintf(listing, "\t(%d, %d): ERROR: Non-terminated comment.\n", lineno, linepos);
+				fprintf(listing, "\t(%d, %d): ERROR: Non-terminated comment.\n", lineno - 1, linepos);
 			}
 			else
 			{
-				state = IN_MULTILINE_COMMENT_2;
+				state = IN_MULTILINE_COMMENT_1;
 			}
 			break;
 		case IN_UPPER_HALF_FLOAT:
