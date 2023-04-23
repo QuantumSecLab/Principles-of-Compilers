@@ -101,9 +101,11 @@ TokenType getToken(void)
 	StateType state = START;
 	/* flag to indicate save to tokenString */
 	int save;
+	/* the last character read from lineBuf */
+	int c;
 	while (state != DONE)
 	{
-		int c = getNextChar();
+		c = getNextChar();
 		save = TRUE;
 		switch (state)
 		{
@@ -334,6 +336,7 @@ TokenType getToken(void)
 		}
 	}
 	if (TraceScan) {
+		if (c == EOF && currentToken != ENDFILE) lineno --; // bug fix
 		fprintf(listing, "\t%d: ", lineno);
 		printToken(currentToken, tokenString);
 	}
