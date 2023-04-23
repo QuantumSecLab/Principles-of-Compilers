@@ -16,7 +16,8 @@ typedef enum
 	DIV_OR_MULTILINE_COMMENT,                       /* Add an intermediate state when it comes to '/' to make the code more human-readable */
 	IN_MULTILINE_COMMENT_1, IN_MULTILINE_COMMENT_2, /* states of DFA for c-style multiline comments */
 	IN_UPPER_HALF_FLOAT,                            /* states of DFA for float numbers which at least have the upper half */
-	IN_LOWER_HALF_FLOAT_1, IN_LOWER_HALF_FLOAT_2    /* states of DFA for float numbers which only have the lower half */
+	IN_LOWER_HALF_FLOAT_1, IN_LOWER_HALF_FLOAT_2,    /* states of DFA for float numbers which only have the lower half */
+	IN_SCIENTIFIC_NOTATION_1, IN_SCIENTIFIC_NOTATION_2, IN_SCIENTIFIC_NOTATION_3 /* states of DFA for scientific notation */
 }
 StateType;
 
@@ -278,13 +279,17 @@ TokenType getToken(void)
 			}
 			break;
 		case IN_UPPER_HALF_FLOAT:
-			if (!isdigit(c))
+			if (!isdigit(c) && c != 'e' && c != 'E')
 			{
 				/* backup the input */
 				ungetNextChar();
 				save = FALSE;
 				state = DONE;
 				currentToken = FLOATNUM;
+			}
+			else if (!isdigit(c) && (c == 'e' || c == 'E'))
+			{
+				state = IN_SCIENTIFIC_NOTATION_1;
 			}
 			else
 			{
@@ -307,7 +312,7 @@ TokenType getToken(void)
 			}
 			break;
 		case IN_LOWER_HALF_FLOAT_2:
-			if (!isdigit(c))
+			if (!isdigit(c) && c != 'e' && c != 'E')
 			{
 				/* backup the input */
 				ungetNextChar();
@@ -315,9 +320,61 @@ TokenType getToken(void)
 				state = DONE;
 				currentToken = FLOATNUM;
 			}
+			else if (!isdigit(c) && (c == 'e' || c == 'E'))
+			{
+				state = IN_SCIENTIFIC_NOTATION_1;
+			}
 			else
 			{
 				state = IN_LOWER_HALF_FLOAT_2;
+			}
+			break;
+		case IN_SCIENTIFIC_NOTATION_1:
+			if (isdigit(c))
+			{
+				state = IN_SCIENTIFIC_NOTATION_3;
+			}
+			else if (c == '+' || c == '-')
+			{
+				state = IN_SCIENTIFIC_NOTATION_2;
+			}
+			else
+			{
+				// error
+				ungetNextChar();
+				state = DONE;
+				currentToken = ERROR;
+				save = FALSE;
+				fprintf(listing, "\t(%d, %d): ERROR: Invalid scientific notation. Expect digits or sign in exponential feild.\n", lineno, linepos);
+			}
+			break;
+		case IN_SCIENTIFIC_NOTATION_2:
+			if (isdigit(c))
+			{
+				state = IN_SCIENTIFIC_NOTATION_3;
+			}
+			else
+			{
+				// error
+				ungetNextChar();
+				save = FALSE;
+				currentToken = ERROR;
+				state = DONE;
+				fprintf(listing, "\t(%d, %d): ERROR: Invalid scientific notation. Expect digits after the sign.\n", lineno, linepos);
+			}
+			break;
+		case IN_SCIENTIFIC_NOTATION_3:
+			if (isdigit(c))
+			{
+				state = IN_SCIENTIFIC_NOTATION_3;
+			}
+			else
+			{
+				/* backup the input */
+				ungetNextChar();
+				save = FALSE;
+				state = DONE;
+				currentToken = SCIENTIFIC_NOTATION;
 			}
 			break;
 		default: /* should never happen */
