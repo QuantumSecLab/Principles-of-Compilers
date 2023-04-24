@@ -369,6 +369,15 @@ TokenType getToken(void)
 			{
 				state = IN_SCIENTIFIC_NOTATION_3;
 			}
+			else if (c == '.')
+			{
+				// error
+				ungetNextChar();
+				save = FALSE;
+				currentToken = ERROR;
+				state = DONE;
+				fprintf(listing, "\t(%d, %d): ERROR: Invalid scientific notation. Exponent cannot be float number.\n", lineno, linepos);
+			}
 			else
 			{
 				/* backup the input */
