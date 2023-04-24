@@ -177,6 +177,7 @@ TokenType getToken(void)
 			{
 				state = DONE;
 				currentToken = ENDFILE;
+				fprintf(listing, "\t(%d, %d): ERROR: Non-terminated comment.\n", lineno, linepos);
 			}
 			else if (c == '}') state = START;
 			break;
