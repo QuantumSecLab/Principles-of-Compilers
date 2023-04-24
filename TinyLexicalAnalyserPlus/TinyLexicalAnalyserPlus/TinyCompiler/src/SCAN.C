@@ -44,6 +44,7 @@ static int getNextChar(void)
 		if (fgets(lineBuf, BUFLEN - 1, source))
 		{
 			if (lineBuf[strlen(lineBuf) - 1] == '\n') lineBuf[strlen(lineBuf) - 1] = '\0';
+			else if (lineBuf[strlen(lineBuf) - 1] != '\n' && strlen(lineBuf) == BUFLEN - 2) fprintf(listing, "ERROR: line %d exceeds the maximum length.\n", lineno);
 			if (EchoSource) fprintf(listing, "%4d: %s\n", lineno, lineBuf);
 			bufsize = strlen(lineBuf);
 			linepos = 0;
@@ -385,6 +386,12 @@ TokenType getToken(void)
 		}
 		if ((save) && (tokenStringIndex <= MAXTOKENLEN))
 			tokenString[tokenStringIndex++] = (char)c;
+		else if (tokenStringIndex > MAXTOKENLEN)
+		{
+			state = DONE;
+			currentToken = ERROR;
+			fprintf(listing, "\t(%d, %d): ERROR: Token length exceeded.\n", lineno, linepos);
+		}
 		if (state == DONE)
 		{
 			tokenString[tokenStringIndex] = '\0';
