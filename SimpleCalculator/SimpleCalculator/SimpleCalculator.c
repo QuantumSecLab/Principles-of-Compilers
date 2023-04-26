@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <time.h>
 
 char token; /* global token variable */
 
@@ -69,8 +70,28 @@ int factor(void)
 	return temp;
 }
 
+// get a random number from [lower, upper]
+int getRandomNumber(int lower, int upper)
+{
+	if (lower <= upper)
+		return rand() % (upper - lower + 1) + lower;
+	else
+		return rand() % (lower - upper + 1) + upper;
+}
+
+int printQuiz()
+{
+
+}
+
+int printAnswer()
+{
+
+}
+
 int main()
 {
+	srand((unsigned int)time(NULL));
 	int result;
 	/*load token with first character for lookahead*/
 	token = getchar();
