@@ -5,16 +5,44 @@
 #include <string.h>
 #define TRUE 1
 #define FALSE 0
-
-char token; /* global token variable */
-
-/*function prototype for recursive calls*/
-int exp(void);
-int term(void);
-int factor(void);
+#define NUMBER_OF_OPERATOR 3
 
 /*********************************************************************************
- * description: get a random number from [lower, upper]
+ * description: 
+ * unget the current token. Actually just decrease the `nextIndex`
+ *
+ * arguments:
+ * size_t* nextIndex: the position where the next character lies
+ *********************************************************************************/
+void ungetNextChar(size_t* nextIndex)
+{
+	if (*nextIndex > 0) --(*nextIndex);
+	return;
+}
+
+/*********************************************************************************
+ * description: 
+ * get the next token from `expression[*nextIndex]`
+ * then increase the `*nextIndex`
+ *
+ * arguments:
+ * char* expression: a string which holds the current expression to be processed
+ * size_t* nextIndex: the index of `expression` where the next token lies
+ * 
+ * return:
+ * the character `expression[*nextIndex]`
+ *********************************************************************************/
+char getNextChar(char* expression, size_t* nextIndex)
+{
+	// does not reach the end of the line
+	if (expression[*nextIndex]) return expression[(*nextIndex)++];
+	// reach the end of the line
+	else return expression[*nextIndex];
+}
+
+/*********************************************************************************
+ * description: 
+ * get a random number from [lower, upper]
  * 
  * arguments:
  * int lower: the lower boundery of the range where the number will be generated
@@ -23,7 +51,7 @@ int factor(void);
  * return:
  * a random number in the range [lower, upper]
  *********************************************************************************/
-int getARandomNumber(int lower, int upper)
+int getRandomNumber(int lower, int upper)
 {
 	if (lower <= upper)
 		return rand() % (upper - lower + 1) + lower;
@@ -32,12 +60,13 @@ int getARandomNumber(int lower, int upper)
 }
 
 /*******************************************************************
- * description: get a random operator from {'+', '-', '*', '/'}
+ * description: 
+ * get a random operator from {'+', '-', '*', '/'}
  *
  * return:
  * a random operator
  *******************************************************************/
-char getARandomOperator()
+char getRandomOperator()
 {
 	int temp = rand((unsigned int)time(NULL)) % 4;
 	switch (temp)
@@ -54,7 +83,8 @@ char getARandomOperator()
 }
 
 /**********************************************************************
- * description: convert the given decimal digit to its character form
+ * description: 
+ * convert the given decimal digit to its character form
  * 
  * argument:
  * int digit: a decimal digit
@@ -72,6 +102,26 @@ char digit2Char(int digit)
 	}
 }
 
+/**********************************************************************
+ * description: 
+ * convert the given decimal digit character to its int form
+ *
+ * argument:
+ * char character: a decimal digit in its character form
+ *
+ * return:
+ * the int form of the given decimal digit character
+ **********************************************************************/
+int char2Digit(char character)
+{
+	if (character >= '0' && character <= '9') return (int)(character - '0');
+	else
+	{
+		fprintf(stderr, "The given character is not a digit.\n");
+		exit(1);
+	}
+}
+
 /*****************************************************************************
  * description:
  * put a number to the `expression`
@@ -81,7 +131,7 @@ char digit2Char(int digit)
  * char* expression: the dst expression buffer where the number will be put
  * size_t currentIndex: the position where the next character will be put
  *****************************************************************************/
-void putANumber(int number, char* expression, size_t* currentIndex)
+void putNumber(int number, char* expression, size_t* currentIndex)
 {
 	char buffer[10000] = { '\0' };
 	int length = 0;
@@ -151,7 +201,8 @@ int isSpecialCase(char* expression)
 }
 
 /*********************************************************************************************
- * description: insert the `character` to the `index + 1` position of the string `expression`
+ * description: 
+ * insert the `character` to the `index + 1` position of the string `expression`
  *
  * arguments:
  * char* expression: the dst string
@@ -173,7 +224,8 @@ void insert(char* expression, char character, int index)
 }
 
 /********************************************************************
- * description: add a pair of parenthesis to the expression randomly
+ * description: 
+ * add a pair of parenthesis to the expression randomly
  * 
  * argument:
  * char* expression: the string which holds the expression
@@ -181,7 +233,7 @@ void insert(char* expression, char character, int index)
  * return:
  * the string which holds the expression
  ********************************************************************/
-char* addAPairOfParenthesis(char* expression)
+char* addParenthesis(char* expression)
 {
 	// initialize the buffer
 	size_t originalLength = strlen(expression);
@@ -258,7 +310,7 @@ char* addAPairOfParenthesis(char* expression)
  * return:
  * char* expression: a string representing the expression
  ****************************************************************/ 
-char* getAnExpression(size_t numberOfOperators)
+char* getExpression(size_t numberOfOperators)
 {
 	// allocate the heap memory for the expression to be returned
 	char* expression = (char*)malloc(numberOfOperators + 3 * (numberOfOperators + 1) + 2 + 1);
@@ -274,95 +326,285 @@ char* getAnExpression(size_t numberOfOperators)
 	for (size_t i = 0; i < numberOfOperators; i++)
 	{
 		// generate a random number from [0, 100] and put the it into the `expression`
-		putANumber(getARandomNumber(0, 100), expression, &expressionIndex);
+		putNumber(getRandomNumber(0, 100), expression, &expressionIndex);
 		// put a random operator to the `expression`
-		expression[expressionIndex++] = getARandomOperator();
+		expression[expressionIndex++] = getRandomOperator();
 	}
 	// put the last operand to the expression
-	putANumber(getARandomNumber(0, 100), expression, &expressionIndex);
-
-	return expression;
+	putNumber(getRandomNumber(0, 100), expression, &expressionIndex);
+	
+	// add a pair of parenthesis to the expression
+	return addParenthesis(expression);
 }
 
+/****************************************************************
+ * description:
+ * handle the exception which occurs when parsing
+ ****************************************************************/
 void error(void)
 {
 	fprintf(stderr, "error\n");
 	exit(1);
 }
 
-void match(char expectedToken)
+/****************************************************************
+ * description:
+ * match a token
+ *
+ * arguments:
+ * char expectedToken: the expected token to be matched
+ * char* expression: the current expression in process
+ * size_t* nextIndex: the index where you will get the next token
+ * from `expression`
+ * char* globalToken: the current token
+ ****************************************************************/
+void match(char expectedToken, char* expression, size_t* nextIndex, char* globalToken)
 {
-	if (token == expectedToken) token = getchar();
+	if (*globalToken == expectedToken) *globalToken = getNextChar(expression, nextIndex);
 	else error();
 }
 
-int exp(void)
+/****************************************************************
+ * description:
+ * parse an expression
+ *
+ * arguments:
+ * char* expression: the current expression in process
+ * size_t* nextIndex: the index where you will get the next token
+ * from `expression`
+ * char* globalToken: the current token
+ * int* isDividedByZero: the flag which indicates whether 
+ * the "divied by zero" exception happens when parsing
+ * 
+ * return:
+ * the value of the expression
+ ****************************************************************/
+int exp(char* expression, size_t* nextIndex, char* globalToken, int* isDividedByZero)
 {
-	int temp = term();
-	while ((token == '+') || (token == '-'))
-		switch (token)
+	int temp = term(expression, nextIndex, globalToken, isDividedByZero);
+	while ((*globalToken == '+') || (*globalToken == '-'))
+		switch (*globalToken)
 		{
 		case '+': 
-			match('+'); 
-			temp += term(); 
+			match('+', expression, nextIndex, globalToken);
+			temp += term(expression, nextIndex, globalToken, isDividedByZero);
 			break;
 		case '-': 
-			match('-'); 
-			temp -= term(); 
+			match('-', expression, nextIndex, globalToken);
+			temp -= term(expression, nextIndex, globalToken, isDividedByZero);
 			break;
 		}
 	return temp;
 }
 
-int term(void)
+/****************************************************************
+ * description:
+ * parse a term
+ *
+ * arguments:
+ * char* expression: the current expression in process
+ * size_t* nextIndex: the index where you will get the next token
+ * from `expression`
+ * char* globalToken: the current token
+ * int* isDividedByZero: the flag which indicates whether
+ * the "divied by zero" exception happens when parsing
+ *
+ * return:
+ * the value of the term
+ ****************************************************************/
+int term(char* expression, size_t* nextIndex, char* globalToken, int* isDividedByZero)
 {
-	int temp = factor();
-	while (token == '*')
+	int temp = factor(expression, nextIndex, globalToken, isDividedByZero);
+	while (*globalToken == '*' || *globalToken == '/')
 	{
-		match('*');
-		temp *= factor();
+		if (*globalToken == '*')
+		{
+			match('*', expression, nextIndex, globalToken);
+			temp *= factor(expression, nextIndex, globalToken, isDividedByZero);
+		}
+		if (*globalToken == '/')
+		{
+			match('/', expression, nextIndex, globalToken);
+			int divisor = factor(expression, nextIndex, globalToken, isDividedByZero);
+			if (divisor) temp /= divisor;
+			else
+			{
+				temp /= 1;
+				*isDividedByZero = TRUE;
+			}
+		}
 	}
+		
 	return temp;
 }
 
-int factor(void)
+/****************************************************************
+ * description:
+ * get the 10's power
+ *
+ * arguments:
+ * int power: the power
+ *
+ * return:
+ * an int, whose value is 10^`power`
+ ****************************************************************/
+int powerOfTen(int power)
+{
+	int result = 1;
+	for (int i = power; i > 0; i--) result *= 10;
+	return result;
+}
+
+/****************************************************************
+ * description:
+ * get an int from `expression`. This method will read all digits
+ * from the `nextIndex` position until encounter the first non-
+ * digital character
+ *
+ * arguments:
+ * char* expression: the current expression in process
+ * size_t* nextIndex: the index where you will get the next token
+ * from `expression`
+ * char* globalToken: the current token
+ *
+ * return:
+ * an int whose the most significant digit locates at `nextInt`
+ * position
+ ****************************************************************/
+int getInt(char* expression, size_t* nextIndex, char* globalToken)
+{
+	// temp buffer to store digits in reverse order
+	int* digits = (int*)malloc(sizeof(int) * 10000);
+	if (!digits)
+	{
+		fprintf(stderr, "Cannot allocate the memory.\n");
+		exit(1);
+	}
+	memset(digits, 0, sizeof(int) * 10000);
+	// index variable for the do-while loop
+	int i = -1;
+	// put digits into the temp buffer in reverse order
+	while (isdigit((int)(*globalToken = getNextChar(expression, nextIndex))) && i < 10000) digits[++i] = char2Digit(*globalToken);
+	// check the condition which lead to the exit
+	if (i >= 10000)
+	{
+		fprintf(stderr, "Too big integer.\n");
+		exit(1);
+	}
+	// put the first non-digital character back to the expression string
+	ungetNextChar(nextIndex);
+	// construct the int
+	int tempSum = 0;
+	int highestPower = i;
+	while (i >= 0)
+	{
+		tempSum += digits[i] * powerOfTen(highestPower - i);
+		i--;
+	}
+	
+	free(digits);
+	return tempSum;
+}
+
+/****************************************************************
+ * description:
+ * parse a factor
+ *
+ * arguments:
+ * char* expression: the current expression in process
+ * size_t* nextIndex: the index where you will get the next token
+ * from `expression`
+ * char* globalToken: the current token
+ * int* isDividedByZero: the flag which indicates whether
+ * the "divied by zero" exception happens when parsing
+ *
+ * return:
+ * the value of the factor
+ ****************************************************************/
+int factor(char* expression, size_t* nextIndex, char* globalToken, int* isDividedByZero)
 {
 	int temp;
-	if (token == '(')
+	if (*globalToken == '(')
 	{
-		match('(');
-		temp = exp();
-		match(')');
+		match('(', expression, nextIndex, globalToken);
+		temp = exp(expression, nextIndex, globalToken, isDividedByZero);
+		match(')', expression, nextIndex, globalToken);
 	}
 	else
-		if (isdigit(token))
+		if (isdigit(*globalToken))
 		{
-			ungetc(token, stdin);
-			scanf("%d", &temp);
-			token = getchar();
+			ungetNextChar(nextIndex);
+			temp = getInt(expression, nextIndex, globalToken);
+			*globalToken = getNextChar(expression, nextIndex, globalToken);
 		}
 		else error();
 	return temp;
 }
 
-//int main()
-//{
-//	srand((unsigned int)time(NULL));
-//	int result;
-//	/*load token with first character for lookahead*/
-//	token = getchar();
-//	result = exp();
-//	if (token == '\n') /*check for end of line*/
-//		printf("Result = % d\n", result);
-//	else error(); /*extraneous chars on line*/
-//	return 0;
-//}
+/****************************************************************
+ * description:
+ * get the result of an expression. If the "divided by zero"
+ * exception happens, rewrite the expression until the exception
+ * won't happen.
+ *
+ * arguments:
+ * char* expression: the current expression to be processed
+ *
+ * return:
+ * the value of the expression
+ ****************************************************************/
+int getResult(char** expression)
+{
+	int isDividedByZero = FALSE;
+	size_t nextIndex = 0;
+	char globalToken = getNextChar(*expression, &nextIndex);
 
+	// get the result;
+	int result = exp(*expression, &nextIndex, &globalToken, &isDividedByZero);
+	while (isDividedByZero)
+	{
+		// rewrite the expression
+		if (*expression) free(*expression);
+		*expression = getExpression(NUMBER_OF_OPERATOR);
+		// reset the flag
+		isDividedByZero = FALSE;
+		// reset the "global variables"
+		nextIndex = 0;
+		globalToken = getNextChar(*expression, &nextIndex);
+		// get the result;
+		result = exp(*expression, &nextIndex, &globalToken, &isDividedByZero);
+	}
+	
+	return result;
+}
+
+/****************************************************************
+ * description:
+ * the driver code
+ *
+ * return:
+ * the status code for OS
+ ****************************************************************/
 int main()
 {
 	srand((unsigned int)time(NULL));
 
-	printf("%s\n", addAPairOfParenthesis(getAnExpression(3)));
+	// generate 100 expressions
+	char* expressions[100] = { NULL };
+	for (int i = 0; i < 100; i++) expressions[i] = getExpression(NUMBER_OF_OPERATOR);
+
+	// solve the questions in the left associative order one by one
+	printf("Answers in the left associative order:\n");
+	for (int i = 0; i < 100; i++)
+	{
+		int result = getResult(&(expressions[i]));
+		printf("%s=%d\n", expressions[i], result);
+	}
+
+	// free the memory
+	for (int i = 0; i < 100; i++) 
+		if (expressions[i])
+			free(expressions[i]);
 
 	return 0;
 }
