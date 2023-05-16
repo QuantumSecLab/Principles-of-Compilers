@@ -6,6 +6,8 @@
 #define TRUE 1
 #define FALSE 0
 #define NUMBER_OF_OPERATOR 3
+#define RIGHT -1
+#define LEFT -2
 
 /*********************************************************************************
  * description: 
@@ -375,26 +377,50 @@ void match(char expectedToken, char* expression, size_t* nextIndex, char* global
  * char* globalToken: the current token
  * int* isDividedByZero: the flag which indicates whether 
  * the "divied by zero" exception happens when parsing
+ * int associativity: LEFT or RIGHT
  * 
  * return:
  * the value of the expression
  ****************************************************************/
-int exp(char* expression, size_t* nextIndex, char* globalToken, int* isDividedByZero)
+int exp(char* expression, size_t* nextIndex, char* globalToken, int* isDividedByZero, int associativity)
 {
-	int temp = term(expression, nextIndex, globalToken, isDividedByZero);
-	while ((*globalToken == '+') || (*globalToken == '-'))
-		switch (*globalToken)
-		{
-		case '+': 
-			match('+', expression, nextIndex, globalToken);
-			temp += term(expression, nextIndex, globalToken, isDividedByZero);
-			break;
-		case '-': 
-			match('-', expression, nextIndex, globalToken);
-			temp -= term(expression, nextIndex, globalToken, isDividedByZero);
-			break;
-		}
-	return temp;
+	switch (associativity)
+	{
+	case LEFT: 
+	{
+		int temp = term(expression, nextIndex, globalToken, isDividedByZero, associativity);
+		while ((*globalToken == '+') || (*globalToken == '-'))
+			switch (*globalToken)
+			{
+			case '+':
+				match('+', expression, nextIndex, globalToken);
+				temp += term(expression, nextIndex, globalToken, isDividedByZero, associativity);
+				break;
+			case '-':
+				match('-', expression, nextIndex, globalToken);
+				temp -= term(expression, nextIndex, globalToken, isDividedByZero, associativity);
+				break;
+			}
+		return temp;
+	}
+	case RIGHT:
+	{
+		int temp = term(expression, nextIndex, globalToken, isDividedByZero, associativity);
+		while ((*globalToken == '+') || (*globalToken == '-'))
+			switch (*globalToken)
+			{
+			case '+':
+				match('+', expression, nextIndex, globalToken);
+				temp += exp(expression, nextIndex, globalToken, isDividedByZero, associativity);
+				break;
+			case '-':
+				match('-', expression, nextIndex, globalToken);
+				temp -= exp(expression, nextIndex, globalToken, isDividedByZero, associativity);
+				break;
+			}
+		return temp;
+	}
+	}
 }
 
 /****************************************************************
@@ -408,34 +434,66 @@ int exp(char* expression, size_t* nextIndex, char* globalToken, int* isDividedBy
  * char* globalToken: the current token
  * int* isDividedByZero: the flag which indicates whether
  * the "divied by zero" exception happens when parsing
+ * int associativity: LEFT or RIGHT
  *
  * return:
  * the value of the term
  ****************************************************************/
-int term(char* expression, size_t* nextIndex, char* globalToken, int* isDividedByZero)
+int term(char* expression, size_t* nextIndex, char* globalToken, int* isDividedByZero, int associativity)
 {
-	int temp = factor(expression, nextIndex, globalToken, isDividedByZero);
-	while (*globalToken == '*' || *globalToken == '/')
+	switch (associativity)
 	{
-		if (*globalToken == '*')
+	case LEFT:
+	{
+		int temp = factor(expression, nextIndex, globalToken, isDividedByZero, associativity);
+		while (*globalToken == '*' || *globalToken == '/')
 		{
-			match('*', expression, nextIndex, globalToken);
-			temp *= factor(expression, nextIndex, globalToken, isDividedByZero);
-		}
-		if (*globalToken == '/')
-		{
-			match('/', expression, nextIndex, globalToken);
-			int divisor = factor(expression, nextIndex, globalToken, isDividedByZero);
-			if (divisor) temp /= divisor;
-			else
+			if (*globalToken == '*')
 			{
-				temp /= 1;
-				*isDividedByZero = TRUE;
+				match('*', expression, nextIndex, globalToken);
+				temp *= factor(expression, nextIndex, globalToken, isDividedByZero, associativity);
+			}
+			if (*globalToken == '/')
+			{
+				match('/', expression, nextIndex, globalToken);
+				int divisor = factor(expression, nextIndex, globalToken, isDividedByZero, associativity);
+				if (divisor) temp /= divisor;
+				else
+				{
+					temp /= 1;
+					*isDividedByZero = TRUE;
+				}
 			}
 		}
+
+		return temp;
 	}
-		
-	return temp;
+	case RIGHT:
+	{
+		int temp = factor(expression, nextIndex, globalToken, isDividedByZero, associativity);
+		while (*globalToken == '*' || *globalToken == '/')
+		{
+			if (*globalToken == '*')
+			{
+				match('*', expression, nextIndex, globalToken);
+				temp *= term(expression, nextIndex, globalToken, isDividedByZero, associativity);
+			}
+			if (*globalToken == '/')
+			{
+				match('/', expression, nextIndex, globalToken);
+				int divisor = term(expression, nextIndex, globalToken, isDividedByZero, associativity);
+				if (divisor) temp /= divisor;
+				else
+				{
+					temp /= 1;
+					*isDividedByZero = TRUE;
+				}
+			}
+		}
+
+		return temp;
+	}
+	}
 }
 
 /****************************************************************
@@ -517,17 +575,18 @@ int getInt(char* expression, size_t* nextIndex, char* globalToken)
  * char* globalToken: the current token
  * int* isDividedByZero: the flag which indicates whether
  * the "divied by zero" exception happens when parsing
+ * int associativity: LEFT or RIGHT
  *
  * return:
  * the value of the factor
  ****************************************************************/
-int factor(char* expression, size_t* nextIndex, char* globalToken, int* isDividedByZero)
+int factor(char* expression, size_t* nextIndex, char* globalToken, int* isDividedByZero, int associativity)
 {
 	int temp;
 	if (*globalToken == '(')
 	{
 		match('(', expression, nextIndex, globalToken);
-		temp = exp(expression, nextIndex, globalToken, isDividedByZero);
+		temp = exp(expression, nextIndex, globalToken, isDividedByZero, associativity);
 		match(')', expression, nextIndex, globalToken);
 	}
 	else
@@ -549,18 +608,19 @@ int factor(char* expression, size_t* nextIndex, char* globalToken, int* isDivide
  *
  * arguments:
  * char* expression: the current expression to be processed
+ * int associativity: LEFT or RIGHT
  *
  * return:
  * the value of the expression
  ****************************************************************/
-int getResult(char** expression)
+int getResult(char** expression, int associativity)
 {
 	int isDividedByZero = FALSE;
 	size_t nextIndex = 0;
 	char globalToken = getNextChar(*expression, &nextIndex);
 
 	// get the result;
-	int result = exp(*expression, &nextIndex, &globalToken, &isDividedByZero);
+	int result = exp(*expression, &nextIndex, &globalToken, &isDividedByZero, associativity);
 	while (isDividedByZero)
 	{
 		// rewrite the expression
@@ -572,7 +632,7 @@ int getResult(char** expression)
 		nextIndex = 0;
 		globalToken = getNextChar(*expression, &nextIndex);
 		// get the result;
-		result = exp(*expression, &nextIndex, &globalToken, &isDividedByZero);
+		result = exp(*expression, &nextIndex, &globalToken, &isDividedByZero, associativity);
 	}
 	
 	return result;
@@ -597,7 +657,17 @@ int main()
 	printf("Answers in the left associative order:\n");
 	for (int i = 0; i < 100; i++)
 	{
-		int result = getResult(&(expressions[i]));
+		int result = getResult(&(expressions[i]), LEFT);
+		printf("%s=%d\n", expressions[i], result);
+	}
+
+	printf("\n=============================================\n\n");
+
+	// solve the questions in the right associative order one by one
+	printf("Answers in the right associative order:\n");
+	for (int i = 0; i < 100; i++)
+	{
+		int result = getResult(&(expressions[i]), RIGHT);
 		printf("%s=%d\n", expressions[i], result);
 	}
 
