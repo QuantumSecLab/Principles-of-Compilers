@@ -5,7 +5,7 @@
 #include <string.h>
 #define TRUE 1
 #define FALSE 0
-#define NUMBER_OF_OPERATOR 10
+#define NUMBER_OF_OPERATOR 3
 #define NUMBER_OF_QUESTION 10000
 #define RIGHT -1
 #define LEFT -2
@@ -330,13 +330,13 @@ char* addParenthesis(char* expression)
 char* getExpression(size_t numberOfOperators)
 {
 	// allocate the heap memory for the expression to be returned
-	char* expression = (char*)malloc(numberOfOperators + 3 * (numberOfOperators + 1) + 2 + 1);
+	char* expression = (char*)malloc(numberOfOperators + 3 * (numberOfOperators + 1) + 100);
 	if (!expression) 
 	{
 		fprintf(stderr, "Cannot allocate the memory.\n");
 		exit(1);
 	}
-	memset(expression, 0, numberOfOperators + 3 * (numberOfOperators + 1));
+	memset(expression, 0, numberOfOperators + 3 * (numberOfOperators + 1) + 100);
 	
 	// generate the expression
 	size_t expressionIndex = 0;
@@ -800,22 +800,20 @@ int main()
 		printf("%s == %lld\n", expressions[i], result);
 	}
 
-	// printf("\n=============================================\n\n");
-
 	// solve the questions in the right associative order one by one
-	//printf("Answers in the right associative order:\n");
-	//for (int i = 0; i < NUMBER_OF_QUESTION; i++)
-	//{
-	//	LL result = getResult(&(expressions[i]), RIGHT, &rewrittenExpressions);
-	//	printf("%s=%lld\n", expressions[i], result);
-	//}
+	LL rightAssociativeAnswers[NUMBER_OF_QUESTION];
+	for (int i = 0; i < NUMBER_OF_QUESTION; i++)
+	{
+		rightAssociativeAnswers[i] = getResult(&(expressions[i]), RIGHT, &rewrittenExpressions);
+		// printf("%s=%lld\n", expressions[i], result);
+	}
 
 
-	//printf("\n=============================================\n\n");
+	// printf("\n=============================================\n\n");
 	
-	// print the rewritten expressions
-	//printf("Rewritten expressions:\n");
-	//for (int i = 0; i < NUMBER_OF_QUESTION; i++) printf("%s\n", rewrittenExpressions.rewrittenExpressions[i]);
+	// print the rewritten expressions with their answers
+	// printf("Rewritten expressions:\n");
+	for (int i = 0; i < NUMBER_OF_QUESTION; i++) printf("%s == %lld\n", rewrittenExpressions.rewrittenExpressions[i], rightAssociativeAnswers[i]);
 
 	// free the memory
 	for (int i = 0; i < NUMBER_OF_QUESTION; i++)
