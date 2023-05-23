@@ -386,6 +386,8 @@ void match(char expectedToken, char* expression, size_t* nextIndex, char* global
  * int* isDividedByZero: the flag which indicates whether 
  * the "divied by zero" exception happens when parsing
  * int associativity: LEFT or RIGHT
+ * RewrittenExpressions* rewrittenExpressions:
+ * if associativity == RIGHT, store rewritten expressions
  * 
  * return:
  * the value of the expression
@@ -471,6 +473,8 @@ int exp(char* expression, size_t* nextIndex, char* globalToken, int* isDividedBy
  * int* isDividedByZero: the flag which indicates whether
  * the "divied by zero" exception happens when parsing
  * int associativity: LEFT or RIGHT
+ * RewrittenExpressions* rewrittenExpressions:
+ * if associativity == RIGHT, store rewritten expressions
  *
  * return:
  * the value of the term
@@ -587,6 +591,8 @@ int powerOfTen(int power)
  * size_t* nextIndex: the index where you will get the next token
  * from `expression`
  * char* globalToken: the current token
+ * RewrittenExpressions* rewrittenExpressions:
+ * if associativity == RIGHT, store rewritten expressions
  *
  * return:
  * an int whose the most significant digit locates at `nextInt`
@@ -643,6 +649,8 @@ int getInt(char* expression, size_t* nextIndex, char* globalToken, int associati
  * int* isDividedByZero: the flag which indicates whether
  * the "divied by zero" exception happens when parsing
  * int associativity: LEFT or RIGHT
+ * RewrittenExpressions* rewrittenExpressions:
+ * if associativity == RIGHT, store rewritten expressions
  *
  * return:
  * the value of the factor
@@ -684,6 +692,8 @@ int factor(char* expression, size_t* nextIndex, char* globalToken, int* isDivide
  * arguments:
  * char* expression: the current expression to be processed
  * int associativity: LEFT or RIGHT
+ * RewrittenExpressions* rewrittenExpressions: 
+ * if associativity == RIGHT, store rewritten expressions
  *
  * return:
  * the value of the expression
