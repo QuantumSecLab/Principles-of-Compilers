@@ -6,8 +6,16 @@
 #define TRUE 1
 #define FALSE 0
 #define NUMBER_OF_OPERATOR 3
+#define NUMBER_OF_QUESTION 100
 #define RIGHT -1
 #define LEFT -2
+
+typedef struct
+{
+	char* rewrittenExpressions[NUMBER_OF_QUESTION];
+	size_t currentRewrittenExpressionIndex;
+	size_t currentRewrittenExpressionNextCharIndex;
+} RewrittenExpressions;
 
 /*********************************************************************************
  * description: 
@@ -382,40 +390,68 @@ void match(char expectedToken, char* expression, size_t* nextIndex, char* global
  * return:
  * the value of the expression
  ****************************************************************/
-int exp(char* expression, size_t* nextIndex, char* globalToken, int* isDividedByZero, int associativity)
+int exp(char* expression, size_t* nextIndex, char* globalToken, int* isDividedByZero, int associativity, RewrittenExpressions* rewrittenExpressions)
 {
 	switch (associativity)
 	{
 	case LEFT: 
 	{
-		int temp = term(expression, nextIndex, globalToken, isDividedByZero, associativity);
+		int temp = term(expression, nextIndex, globalToken, isDividedByZero, associativity, rewrittenExpressions);
 		while ((*globalToken == '+') || (*globalToken == '-'))
 			switch (*globalToken)
 			{
 			case '+':
 				match('+', expression, nextIndex, globalToken);
-				temp += term(expression, nextIndex, globalToken, isDividedByZero, associativity);
+				temp += term(expression, nextIndex, globalToken, isDividedByZero, associativity, rewrittenExpressions);
 				break;
 			case '-':
 				match('-', expression, nextIndex, globalToken);
-				temp -= term(expression, nextIndex, globalToken, isDividedByZero, associativity);
+				temp -= term(expression, nextIndex, globalToken, isDividedByZero, associativity, rewrittenExpressions);
 				break;
 			}
 		return temp;
 	}
 	case RIGHT:
 	{
-		int temp = term(expression, nextIndex, globalToken, isDividedByZero, associativity);
+		int temp = term(expression, nextIndex, globalToken, isDividedByZero, associativity, rewrittenExpressions);
 		while ((*globalToken == '+') || (*globalToken == '-'))
 			switch (*globalToken)
 			{
 			case '+':
 				match('+', expression, nextIndex, globalToken);
-				temp += exp(expression, nextIndex, globalToken, isDividedByZero, associativity);
+
+				// first, insert a '('
+				insert(rewrittenExpressions->rewrittenExpressions[rewrittenExpressions->currentRewrittenExpressionIndex], '(', rewrittenExpressions->currentRewrittenExpressionNextCharIndex - 1);
+				// skip the '('
+				(rewrittenExpressions->currentRewrittenExpressionNextCharIndex)++;
+				// then, synchronize `nextIndex` with `rewrittenExpressions->currentRewrittenExpressionNextCharIndex`
+				(rewrittenExpressions->currentRewrittenExpressionNextCharIndex)++;
+
+				temp += exp(expression, nextIndex, globalToken, isDividedByZero, associativity, rewrittenExpressions);
+
+				// first, insert a ')'
+				insert(rewrittenExpressions->rewrittenExpressions[rewrittenExpressions->currentRewrittenExpressionIndex], ')', rewrittenExpressions->currentRewrittenExpressionNextCharIndex - 2);
+				// skip the ')'
+				(rewrittenExpressions->currentRewrittenExpressionNextCharIndex)++;
+
 				break;
 			case '-':
 				match('-', expression, nextIndex, globalToken);
-				temp -= exp(expression, nextIndex, globalToken, isDividedByZero, associativity);
+
+				// first, insert a '('
+				insert(rewrittenExpressions->rewrittenExpressions[rewrittenExpressions->currentRewrittenExpressionIndex], '(', rewrittenExpressions->currentRewrittenExpressionNextCharIndex - 1);
+				// skip the '('
+				(rewrittenExpressions->currentRewrittenExpressionNextCharIndex)++;
+				// then, synchronize `nextIndex` with `rewrittenExpressions->currentRewrittenExpressionNextCharIndex`
+				(rewrittenExpressions->currentRewrittenExpressionNextCharIndex)++;
+
+				temp -= exp(expression, nextIndex, globalToken, isDividedByZero, associativity, rewrittenExpressions);
+
+				// first, insert a ')'
+				insert(rewrittenExpressions->rewrittenExpressions[rewrittenExpressions->currentRewrittenExpressionIndex], ')', rewrittenExpressions->currentRewrittenExpressionNextCharIndex - 2);
+				// skip the ')'
+				(rewrittenExpressions->currentRewrittenExpressionNextCharIndex)++;
+
 				break;
 			}
 		return temp;
@@ -439,24 +475,24 @@ int exp(char* expression, size_t* nextIndex, char* globalToken, int* isDividedBy
  * return:
  * the value of the term
  ****************************************************************/
-int term(char* expression, size_t* nextIndex, char* globalToken, int* isDividedByZero, int associativity)
+int term(char* expression, size_t* nextIndex, char* globalToken, int* isDividedByZero, int associativity, RewrittenExpressions* rewrittenExpressions)
 {
 	switch (associativity)
 	{
 	case LEFT:
 	{
-		int temp = factor(expression, nextIndex, globalToken, isDividedByZero, associativity);
+		int temp = factor(expression, nextIndex, globalToken, isDividedByZero, associativity, rewrittenExpressions);
 		while (*globalToken == '*' || *globalToken == '/')
 		{
 			if (*globalToken == '*')
 			{
 				match('*', expression, nextIndex, globalToken);
-				temp *= factor(expression, nextIndex, globalToken, isDividedByZero, associativity);
+				temp *= factor(expression, nextIndex, globalToken, isDividedByZero, associativity, rewrittenExpressions);
 			}
 			if (*globalToken == '/')
 			{
 				match('/', expression, nextIndex, globalToken);
-				int divisor = factor(expression, nextIndex, globalToken, isDividedByZero, associativity);
+				int divisor = factor(expression, nextIndex, globalToken, isDividedByZero, associativity, rewrittenExpressions);
 				if (divisor) temp /= divisor;
 				else
 				{
@@ -470,18 +506,45 @@ int term(char* expression, size_t* nextIndex, char* globalToken, int* isDividedB
 	}
 	case RIGHT:
 	{
-		int temp = factor(expression, nextIndex, globalToken, isDividedByZero, associativity);
+		int temp = factor(expression, nextIndex, globalToken, isDividedByZero, associativity, rewrittenExpressions);
 		while (*globalToken == '*' || *globalToken == '/')
 		{
 			if (*globalToken == '*')
 			{
 				match('*', expression, nextIndex, globalToken);
-				temp *= term(expression, nextIndex, globalToken, isDividedByZero, associativity);
+
+				// first, insert a '('
+				insert(rewrittenExpressions->rewrittenExpressions[rewrittenExpressions->currentRewrittenExpressionIndex], '(', rewrittenExpressions->currentRewrittenExpressionNextCharIndex - 1);
+				// skip the '('
+				(rewrittenExpressions->currentRewrittenExpressionNextCharIndex)++;
+				// then, synchronize `nextIndex` with `rewrittenExpressions->currentRewrittenExpressionNextCharIndex`
+				(rewrittenExpressions->currentRewrittenExpressionNextCharIndex)++;
+
+				temp *= term(expression, nextIndex, globalToken, isDividedByZero, associativity, rewrittenExpressions);
+
+				// first, insert a ')'
+				insert(rewrittenExpressions->rewrittenExpressions[rewrittenExpressions->currentRewrittenExpressionIndex], ')', rewrittenExpressions->currentRewrittenExpressionNextCharIndex - 2);
+				// skip the ')'
+				(rewrittenExpressions->currentRewrittenExpressionNextCharIndex)++;
 			}
 			if (*globalToken == '/')
 			{
 				match('/', expression, nextIndex, globalToken);
-				int divisor = term(expression, nextIndex, globalToken, isDividedByZero, associativity);
+
+				// first, insert a '('
+				insert(rewrittenExpressions->rewrittenExpressions[rewrittenExpressions->currentRewrittenExpressionIndex], '(', rewrittenExpressions->currentRewrittenExpressionNextCharIndex - 1);
+				// skip the '('
+				(rewrittenExpressions->currentRewrittenExpressionNextCharIndex)++;
+				// then, synchronize `nextIndex` with `rewrittenExpressions->currentRewrittenExpressionNextCharIndex`
+				(rewrittenExpressions->currentRewrittenExpressionNextCharIndex)++;
+
+				int divisor = term(expression, nextIndex, globalToken, isDividedByZero, associativity, rewrittenExpressions);
+
+				// first, insert a ')'
+				insert(rewrittenExpressions->rewrittenExpressions[rewrittenExpressions->currentRewrittenExpressionIndex], ')', rewrittenExpressions->currentRewrittenExpressionNextCharIndex - 2);
+				// skip the ')'
+				(rewrittenExpressions->currentRewrittenExpressionNextCharIndex)++;
+
 				if (divisor) temp /= divisor;
 				else
 				{
@@ -529,7 +592,7 @@ int powerOfTen(int power)
  * an int whose the most significant digit locates at `nextInt`
  * position
  ****************************************************************/
-int getInt(char* expression, size_t* nextIndex, char* globalToken)
+int getInt(char* expression, size_t* nextIndex, char* globalToken, int associativity, RewrittenExpressions* rewrittenExpressions)
 {
 	// temp buffer to store digits in reverse order
 	int* digits = (int*)malloc(sizeof(int) * 10000);
@@ -543,6 +606,8 @@ int getInt(char* expression, size_t* nextIndex, char* globalToken)
 	int i = -1;
 	// put digits into the temp buffer in reverse order
 	while (isdigit((int)(*globalToken = getNextChar(expression, nextIndex))) && i < 10000) digits[++i] = char2Digit(*globalToken);
+	// synchronize `nextIndex` with `rewrittenExpressions->currentRewrittenExpressionNextCharIndex`
+	if (associativity == RIGHT) rewrittenExpressions->currentRewrittenExpressionNextCharIndex += i + 2;
 	// check the condition which lead to the exit
 	if (i >= 10000)
 	{
@@ -551,6 +616,8 @@ int getInt(char* expression, size_t* nextIndex, char* globalToken)
 	}
 	// put the first non-digital character back to the expression string
 	ungetNextChar(nextIndex);
+	// synchronize `nextIndex` with `rewrittenExpressions->currentRewrittenExpressionNextCharIndex`
+	if (associativity == RIGHT) (rewrittenExpressions->currentRewrittenExpressionNextCharIndex)--;
 	// construct the int
 	int tempSum = 0;
 	int highestPower = i;
@@ -580,21 +647,29 @@ int getInt(char* expression, size_t* nextIndex, char* globalToken)
  * return:
  * the value of the factor
  ****************************************************************/
-int factor(char* expression, size_t* nextIndex, char* globalToken, int* isDividedByZero, int associativity)
+int factor(char* expression, size_t* nextIndex, char* globalToken, int* isDividedByZero, int associativity, RewrittenExpressions* rewrittenExpressions)
 {
 	int temp;
 	if (*globalToken == '(')
 	{
 		match('(', expression, nextIndex, globalToken);
-		temp = exp(expression, nextIndex, globalToken, isDividedByZero, associativity);
+		// synchronize `nextIndex` with `rewrittenExpressions->currentRewrittenExpressionNextCharIndex`
+		if (associativity == RIGHT) (rewrittenExpressions->currentRewrittenExpressionNextCharIndex)++;
+		temp = exp(expression, nextIndex, globalToken, isDividedByZero, associativity, rewrittenExpressions);
 		match(')', expression, nextIndex, globalToken);
+		// synchronize `nextIndex` with `rewrittenExpressions->currentRewrittenExpressionNextCharIndex`
+		if (associativity == RIGHT) (rewrittenExpressions->currentRewrittenExpressionNextCharIndex)++;
 	}
 	else
 		if (isdigit(*globalToken))
 		{
 			ungetNextChar(nextIndex);
-			temp = getInt(expression, nextIndex, globalToken);
+			// synchronize `nextIndex` with `rewrittenExpressions->currentRewrittenExpressionNextCharIndex`
+			if (associativity == RIGHT) (rewrittenExpressions->currentRewrittenExpressionNextCharIndex)--;
+			temp = getInt(expression, nextIndex, globalToken, associativity, rewrittenExpressions);
 			*globalToken = getNextChar(expression, nextIndex, globalToken);
+			// synchronize `nextIndex` with `rewrittenExpressions->currentRewrittenExpressionNextCharIndex`
+			if (associativity == RIGHT) (rewrittenExpressions->currentRewrittenExpressionNextCharIndex)++;
 		}
 		else error();
 	return temp;
@@ -613,26 +688,67 @@ int factor(char* expression, size_t* nextIndex, char* globalToken, int* isDivide
  * return:
  * the value of the expression
  ****************************************************************/
-int getResult(char** expression, int associativity)
+int getResult(char** expression, int associativity, RewrittenExpressions* rewrittenExpressions)
 {
+	// initialize the rewritten expression
+	if (associativity == RIGHT)
+	{
+		// allocate new heap memory for the rewritten expression
+		if ((rewrittenExpressions->rewrittenExpressions)[++(rewrittenExpressions->currentRewrittenExpressionIndex)] = (char*)malloc(2 * strlen(*expression)))
+		{
+			memset((rewrittenExpressions->rewrittenExpressions)[rewrittenExpressions->currentRewrittenExpressionIndex], 0, 2 * strlen(*expression));
+			memcpy((rewrittenExpressions->rewrittenExpressions)[rewrittenExpressions->currentRewrittenExpressionIndex], *expression, strlen(*expression));
+		}
+		else
+		{
+			fprintf(stderr, "Cannot allocate the memory.\n");
+			exit(1);
+		}
+		// rewind the position pointer
+		rewrittenExpressions->currentRewrittenExpressionNextCharIndex = 0;
+	}
+
 	int isDividedByZero = FALSE;
 	size_t nextIndex = 0;
 	char globalToken = getNextChar(*expression, &nextIndex);
+	// synchronize `nextIndex` with `rewrittenExpressions->currentRewrittenExpressionNextCharIndex`
+	if (associativity == RIGHT) (rewrittenExpressions->currentRewrittenExpressionNextCharIndex)++;
 
 	// get the result;
-	int result = exp(*expression, &nextIndex, &globalToken, &isDividedByZero, associativity);
+	int result = exp(*expression, &nextIndex, &globalToken, &isDividedByZero, associativity, rewrittenExpressions);
 	while (isDividedByZero)
 	{
 		// rewrite the expression
 		if (*expression) free(*expression);
 		*expression = getExpression(NUMBER_OF_OPERATOR);
+		// reset the rewritten expression
+		if (associativity == RIGHT)
+		{
+			// release the heap memory allocated to the current rewritten expression
+			free((rewrittenExpressions->rewrittenExpressions)[rewrittenExpressions->currentRewrittenExpressionIndex]);
+			// allocate new heap memory for the rewritten expression
+			if ((rewrittenExpressions->rewrittenExpressions)[rewrittenExpressions->currentRewrittenExpressionIndex] = (char*)malloc(2 * strlen(*expression)))
+			{
+				memset((rewrittenExpressions->rewrittenExpressions)[rewrittenExpressions->currentRewrittenExpressionIndex], 0, 2 * strlen(*expression));
+				memcpy((rewrittenExpressions->rewrittenExpressions)[rewrittenExpressions->currentRewrittenExpressionIndex], *expression, strlen(*expression));
+			}
+			else
+			{
+				fprintf(stderr, "Cannot allocate the memory.\n");
+				exit(1);
+			}
+			// rewind the position pointer
+			rewrittenExpressions->currentRewrittenExpressionNextCharIndex = 0;
+		}
 		// reset the flag
 		isDividedByZero = FALSE;
 		// reset the "global variables"
 		nextIndex = 0;
 		globalToken = getNextChar(*expression, &nextIndex);
+		// synchronize `nextIndex` with `rewrittenExpressions->currentRewrittenExpressionNextCharIndex`
+		if (associativity == RIGHT) (rewrittenExpressions->currentRewrittenExpressionNextCharIndex)++;
 		// get the result;
-		result = exp(*expression, &nextIndex, &globalToken, &isDividedByZero, associativity);
+		result = exp(*expression, &nextIndex, &globalToken, &isDividedByZero, associativity, rewrittenExpressions);
 	}
 	
 	return result;
@@ -649,15 +765,21 @@ int main()
 {
 	srand((unsigned int)time(NULL));
 
-	// generate 100 expressions
-	char* expressions[100] = { NULL };
-	for (int i = 0; i < 100; i++) expressions[i] = getExpression(NUMBER_OF_OPERATOR);
+	// initialize RewrittenExpressions
+	RewrittenExpressions rewrittenExpressions;
+	rewrittenExpressions.currentRewrittenExpressionNextCharIndex = 0;
+	rewrittenExpressions.currentRewrittenExpressionIndex = -1;
+	for (int i = 0; i < NUMBER_OF_QUESTION; i++) rewrittenExpressions.rewrittenExpressions[i] = NULL;
+
+	// generate NUMBER_OF_QUESTION expressions
+	char* expressions[NUMBER_OF_QUESTION] = { NULL };
+	for (int i = 0; i < NUMBER_OF_QUESTION; i++) expressions[i] = getExpression(NUMBER_OF_OPERATOR);
 
 	// solve the questions in the left associative order one by one
 	printf("Answers in the left associative order:\n");
-	for (int i = 0; i < 100; i++)
+	for (int i = 0; i < NUMBER_OF_QUESTION; i++)
 	{
-		int result = getResult(&(expressions[i]), LEFT);
+		int result = getResult(&(expressions[i]), LEFT, &rewrittenExpressions);
 		printf("%s=%d\n", expressions[i], result);
 	}
 
@@ -665,14 +787,21 @@ int main()
 
 	// solve the questions in the right associative order one by one
 	printf("Answers in the right associative order:\n");
-	for (int i = 0; i < 100; i++)
+	for (int i = 0; i < NUMBER_OF_QUESTION; i++)
 	{
-		int result = getResult(&(expressions[i]), RIGHT);
+		int result = getResult(&(expressions[i]), RIGHT, &rewrittenExpressions);
 		printf("%s=%d\n", expressions[i], result);
 	}
 
+
+	printf("\n=============================================\n\n");
+	
+	// print the rewritten expressions
+	printf("Rewritten expressions:\n");
+	for (int i = 0; i < NUMBER_OF_QUESTION; i++) printf("%s\n", rewrittenExpressions.rewrittenExpressions[i]);
+
 	// free the memory
-	for (int i = 0; i < 100; i++) 
+	for (int i = 0; i < NUMBER_OF_QUESTION; i++)
 		if (expressions[i])
 			free(expressions[i]);
 
