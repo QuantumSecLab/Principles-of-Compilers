@@ -5,10 +5,13 @@
 #include <string.h>
 #define TRUE 1
 #define FALSE 0
+#define ON 1
+#define OFF 2
 #define NUMBER_OF_OPERATOR 3
-#define NUMBER_OF_QUESTION 10000
+#define NUMBER_OF_QUESTION 10000000
 #define RIGHT -1
 #define LEFT -2
+#define RELEASE_FLAG OFF
 
 typedef struct
 {
@@ -792,33 +795,48 @@ int main()
 	char* expressions[NUMBER_OF_QUESTION] = { NULL };
 	for (int i = 0; i < NUMBER_OF_QUESTION; i++) expressions[i] = getExpression(NUMBER_OF_OPERATOR);
 
+	freopen("output.txt", "w", stdout);
+
 	// solve the questions in the left associative order one by one
-	// printf("Answers in the left associative order:\n");
+#if RELEASE_FLAG == ON
+	printf("Answers in the left associative order:\n");
+#endif
+
 	for (int i = 0; i < NUMBER_OF_QUESTION; i++)
 	{
 		LL result = getResult(&(expressions[i]), LEFT, &rewrittenExpressions);
 		printf("%s == %lld\n", expressions[i], result);
 	}
 
+#if RELEASE_FLAG == ON
+	printf("\n=============================================\n\n");
 	// solve the questions in the right associative order one by one
+	printf("Answers in the right associative order:\n");
+#endif
+
 	LL rightAssociativeAnswers[NUMBER_OF_QUESTION];
 	for (int i = 0; i < NUMBER_OF_QUESTION; i++)
 	{
 		rightAssociativeAnswers[i] = getResult(&(expressions[i]), RIGHT, &rewrittenExpressions);
-		// printf("%s=%lld\n", expressions[i], result);
+#if RELEASE_FLAG == ON
+		printf("%s == %lld\n", expressions[i], rightAssociativeAnswers[i]);
+#endif
 	}
 
-
-	// printf("\n=============================================\n\n");
-	
+#if RELEASE_FLAG == OFF
 	// print the rewritten expressions with their answers
-	// printf("Rewritten expressions:\n");
 	for (int i = 0; i < NUMBER_OF_QUESTION; i++) printf("%s == %lld\n", rewrittenExpressions.rewrittenExpressions[i], rightAssociativeAnswers[i]);
+#endif
 
 	// free the memory
 	for (int i = 0; i < NUMBER_OF_QUESTION; i++)
+	{
 		if (expressions[i])
 			free(expressions[i]);
+		if (rewrittenExpressions.rewrittenExpressions[i])
+			free(rewrittenExpressions.rewrittenExpressions[i]);
+	}
+		
 
 	return 0;
 }
