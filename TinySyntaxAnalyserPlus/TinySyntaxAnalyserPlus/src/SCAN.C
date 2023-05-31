@@ -12,7 +12,7 @@
 /* states in scanner DFA */
 typedef enum
 {
-	START, INASSIGN, INCOMMENT, INNUM, INID, DONE, 
+	START, INASSIGN, INNUM, INID, DONE, 
 	DIV_OR_MULTILINE_COMMENT,                       /* Add an intermediate state when it comes to '/' to make the code more human-readable */
 	IN_MULTILINE_COMMENT_1, IN_MULTILINE_COMMENT_2, /* states of DFA for c-style multiline comments */
 	IN_UPPER_HALF_FLOAT,                            /* states of DFA for float numbers which at least have the upper half */
@@ -120,11 +120,6 @@ TokenType getToken(void)
 				state = INASSIGN;
 			else if ((c == ' ') || (c == '\t') || (c == '\n'))
 				save = FALSE;
-			else if (c == '{')
-			{
-				save = FALSE;
-				state = INCOMMENT;
-			}
 			else if (c == '.')
 			{
 				state = IN_LOWER_HALF_FLOAT_1;
@@ -170,16 +165,6 @@ TokenType getToken(void)
 					break;
 				}
 			}
-			break;
-		case INCOMMENT:
-			save = FALSE;
-			if (c == EOF)
-			{
-				state = DONE;
-				currentToken = ENDFILE;
-				fprintf(listing, "\t(%d, %d): ERROR: Non-terminated comment.\n", lineno, linepos);
-			}
-			else if (c == '}') state = START;
 			break;
 		case INASSIGN:
 			state = DONE;
