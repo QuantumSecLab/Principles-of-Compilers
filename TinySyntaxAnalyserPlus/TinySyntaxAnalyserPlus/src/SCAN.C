@@ -43,9 +43,10 @@ static int getNextChar(void)
 		lineno++;
 		if (fgets(lineBuf, BUFLEN - 1, source))
 		{
-			if (lineBuf[strlen(lineBuf) - 1] == '\n') lineBuf[strlen(lineBuf) - 1] = '\0';
-			else if (lineBuf[strlen(lineBuf) - 1] != '\n' && strlen(lineBuf) == BUFLEN - 2) fprintf(listing, "ERROR: line %d exceeds the maximum length.\n", lineno);
-			if (EchoSource) fprintf(listing, "%4d: %s\n", lineno, lineBuf);
+			if (lineBuf[strlen(lineBuf) - 1] != '\n') fprintf(listing, "ERROR: line %d exceeds the maximum length.\n", lineno);
+			char lineBufCopy[BUFLEN] = "";
+			memcpy(lineBufCopy, lineBuf, strlen(lineBuf) - 1);
+			if (EchoSource) fprintf(listing, "%4d: %s\n", lineno, lineBufCopy);
 			bufsize = strlen(lineBuf);
 			linepos = 0;
 			return lineBuf[linepos++];
