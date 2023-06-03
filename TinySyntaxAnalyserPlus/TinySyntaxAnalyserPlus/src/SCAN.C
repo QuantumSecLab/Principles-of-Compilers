@@ -218,6 +218,7 @@ TokenType getToken(void)
 				save = FALSE;
 				state = IN_MULTILINE_COMMENT_1;
 				memset(tokenString, 0, MAXTOKENLEN + 1);
+				tokenStringIndex = 0;
 			}
 			else
 			{
