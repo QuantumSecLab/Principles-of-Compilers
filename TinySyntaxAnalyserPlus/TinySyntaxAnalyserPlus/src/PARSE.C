@@ -56,7 +56,7 @@ TreeNode* stmt_sequence(void)
 
 		if (token == SEMI) match(SEMI);
 		else if (token == RBRACE) return t;
-		else syntaxError("Expect a ';' or '}' in the statement sequence.");
+		else syntaxError("Expect a ';' or '}' at the end of the statement.");
 		
 		q = statement();
 		if (q != NULL) {
