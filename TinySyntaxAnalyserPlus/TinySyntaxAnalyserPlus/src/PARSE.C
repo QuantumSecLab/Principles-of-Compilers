@@ -80,7 +80,6 @@ TreeNode* statement(void)
 	case ID: t = assign_stmt(); break;
 	case READ: t = read_stmt(); break;
 	case WRITE: t = write_stmt(); break;
-	case INT: t = function_def(); break;
 	default: syntaxError("unexpected token -> ");
 		printToken(token, tokenString);
 		token = getToken();
