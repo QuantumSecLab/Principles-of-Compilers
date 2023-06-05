@@ -24,6 +24,7 @@ static TreeNode* exp(void);
 static TreeNode* simple_exp(void);
 static TreeNode* term(void);
 static TreeNode* factor(void);
+static TreeNode* type(void);
 static TreeNode* function_def(char* type, char* id);
 static TreeNode* formal_parameter_list(void);
 static TreeNode* formal_parameter(void);
@@ -35,6 +36,7 @@ static TreeNode* start_with_type(void);
 static TreeNode* array_reference(char* id);
 static TreeNode* array_index(void);
 static TreeNode* variable_declaration(char* type, char* id);
+static TreeNode* initial_value_list(void);
 
 static void syntaxError(char* message)
 {
@@ -213,6 +215,13 @@ TreeNode* factor(void)
 			t->attr.val = atoi(tokenString);
 		match(NUM);
 		break;
+	case FLOATNUM:
+	case SCIENTIFIC_NOTATION:
+		t = newExpNode(ConstK);
+		if ((t != NULL) && (token == FLOATNUM || token == SCIENTIFIC_NOTATION))
+			sscanf(tokenString, "%lf", &(t->attr.fval));
+		match(token);
+		break;
 	case ID:
 		t = start_with_id();
 		break;
@@ -230,9 +239,31 @@ TreeNode* factor(void)
 	return t;
 }
 
+TreeNode* type(void)
+{
+	TreeNode* root = newExpNode(TypeK);
+
+	// check the memory allocation
+	if (!root) return root;
+
+	// match a type
+	switch (token)
+	{
+	case INT:
+	case FLOAT:
+		root->attr.name = copyString(tokenString);
+		break;
+	default:
+		syntaxError("Expect a token indicating a certain type.");
+		break;
+	}
+
+	return root;
+}
+
 static TreeNode* formal_parameter(void)
 {
-	TreeNode* t = newStmtNode(FormalParameter);
+	TreeNode* t = newExpNode(FormalParameterK);
 	if (t && (token == INT || token == FLOAT))
 	{
 		// add a lchild node for the parameter type
@@ -278,7 +309,7 @@ TreeNode* function_call(char* id)
 
 TreeNode* actual_parameter_list(void)
 {
-	TreeNode* root = newStmtNode(ActualParameterListK);
+	TreeNode* root = newExpNode(ActualParameterListK);
 
 	// check the memory allocation result
 	if (!root) return root;
@@ -308,7 +339,7 @@ TreeNode* actual_parameter_list(void)
 
 TreeNode* actual_parameter(void)
 {
-	TreeNode* root = newExpNode(ActualParameter);
+	TreeNode* root = newExpNode(ActualParameterK);
 
 	// check the memory allocation result
 	if (!root) return root;
@@ -385,7 +416,7 @@ TreeNode* start_with_type(void)
 
 TreeNode* array_reference(char* id)
 {
-	TreeNode* root = newExpNode(ArrayRef);
+	TreeNode* root = newExpNode(ArrayRefK);
 
 	// check memory allocation
 	if (!root) return root;
@@ -401,7 +432,7 @@ TreeNode* array_reference(char* id)
 
 TreeNode* array_index(void)
 {
-	TreeNode* root = newExpNode(ArrayIndex);
+	TreeNode* root = newExpNode(ArrayIndexK);
 
 	// check memory allocation
 	if (!root) return root;
@@ -430,14 +461,106 @@ TreeNode* array_index(void)
 
 TreeNode* variable_declaration(char* type, char* id)
 {
-	TreeNode* root = NULL;
+	TreeNode* root = newStmtNode(VarDeclarationK);
+
+	// check memory allocation result
+	if (!root) return root;
+
+	// assign the variable type
+	root->child[0] = newExpNode(TypeK);
+	root->child[0]->attr.name = type;
+
+	// match the variable list
+	// assign the first id
+	TreeNode* currentVariable = NULL;
+	if (!(currentVariable = root->child[1] = newExpNode(VariableK))) return root;
+	if (!(currentVariable->child[0] = newExpNode(IdK))) return root;
+	currentVariable->child[0]->attr.name = id;
+
+	// check whether optional parts exists
+	if (token == ASSIGN)
+	{
+		match(ASSIGN);
+		currentVariable->child[1] = exp();
+	}
+	else if (token == LBOX)
+	{
+		// match the array index
+		currentVariable->child[1] = array_index();
+		// check whether optional parts exists
+		if (token == ASSIGN)
+		{
+			match(ASSIGN);
+			match(LBRACE);
+			currentVariable->child[2] = initial_value_list();
+			match(RBRACE);
+		}
+	}
+
+	while (token == COMMA)
+	{
+		// allocate the memory and move the pointer forward
+		if (currentVariable->sibling = newExpNode(VariableK)) 
+			currentVariable = currentVariable->sibling;
+		else
+			return root;
+		// match the id
+		if (!(currentVariable->child[0] = newExpNode(IdK))) return root;
+		currentVariable->child[0]->attr.name = copyString(tokenString);
+		match(ID);
+		// check whether optional parts exists
+		if (token == ASSIGN)
+		{
+			match(ASSIGN);
+			currentVariable->child[1] = exp();
+		}
+		else if (token == LBOX)
+		{
+			// match the array index
+			currentVariable->child[1] = array_index();
+			// check whether optional parts exists
+			if (token == ASSIGN)
+			{
+				match(ASSIGN);
+				match(LBRACE);
+				currentVariable->child[2] = initial_value_list();
+				match(RBRACE);
+			}
+		}
+	}
+
+	return root;
+}
+
+TreeNode* initial_value_list(void)
+{
+	TreeNode* root = newExpNode(InitValListK);
+
+	// check the memory allocation
+	if (!root) return root;
+
+	// match the first initial value
+	TreeNode* currentValueNode = NULL;
+	if (!(currentValueNode = root->child[0] = exp())) return root;
+
+	// match all initial values one by one
+	while (token == COMMA)
+	{
+		match(COMMA);
+		if (!(currentValueNode->sibling = exp())) return root;
+		currentValueNode = currentValueNode->sibling;
+	}
+
+	// check the syntax
+	if (token != RBRACE)
+		syntaxError("Unexpected token presented in the initial value list.");
 
 	return root;
 }
 
 static TreeNode* formal_parameter_list(void)
 {
-	TreeNode* root = newStmtNode(FormalParameterListK);
+	TreeNode* root = newExpNode(FormalParameterListK);
 
 	// check whether the parameter list is empty
 	if (token != RPAREN)

@@ -48,10 +48,10 @@ extern int lineno; /* source line number for listing */
 /**************************************************/
 
 typedef enum { StmtK, ExpK } NodeKind;
-typedef enum { IfK, RepeatK, AssignK, ReadK, WriteK, FunctionDefK, 
-               FormalParameterListK, FormalParameter, ActualParameterListK } StmtKind;
-typedef enum { OpK, ConstK, TypeK, IdK, CallK, ActualParameter, 
-               ArrayRef, ArrayIndex } ExpKind;
+typedef enum { IfK, RepeatK, AssignK, ReadK, WriteK, FunctionDefK, VarDeclarationK } StmtKind;
+typedef enum { OpK, ConstK, TypeK, IdK, CallK, FormalParameterListK, FormalParameterK,
+               ActualParameterListK, ActualParameterK, ArrayRefK, ArrayIndexK, VariableK,
+               InitValListK} ExpKind;
 
 /* ExpType is used for type checking */
 typedef enum { Void, Integer, Boolean, Float } ExpType;
@@ -68,6 +68,7 @@ typedef struct treeNode
 	union {
 		TokenType op;
 		int val;
+		double fval;
 		char* name;
 	} attr;
 	ExpType type; /* for type checking of exps */

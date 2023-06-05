@@ -173,15 +173,6 @@ void printTree(TreeNode* tree)
 			case FunctionDefK:
 				fprintf(listing, "Function definition: %s\n", tree->attr.name);
 				break;
-			case FormalParameterListK:
-				fprintf(listing, "Formal parameter list:\n");
-				break;
-			case FormalParameter:
-				fprintf(listing, "Formal parameter:\n");
-				break;
-			case ActualParameterListK:
-				fprintf(listing, "Actual parameter List:\n");
-				break;
 			default:
 				fprintf(listing, "Unknown ExpNode kind\n");
 				break;
@@ -206,14 +197,29 @@ void printTree(TreeNode* tree)
 			case CallK:
 				fprintf(listing, "Function call: %s\n", tree->attr.name);
 				break;
-			case ActualParameter:
+			case FormalParameterListK:
+				fprintf(listing, "Formal parameter list:\n");
+				break;
+			case FormalParameterK:
+				fprintf(listing, "Formal parameter:\n");
+				break;
+			case ActualParameterListK:
+				fprintf(listing, "Actual parameter List:\n");
+				break;
+			case ActualParameterK:
 				fprintf(listing, "Actual parameter: %s\n", tree->attr.name);
 				break;
-			case ArrayRef:
+			case ArrayRefK:
 				fprintf(listing, "Array reference: %s\n", tree->attr.name);
 				break;
-			case ArrayIndex:
+			case ArrayIndexK:
 				fprintf(listing, "Array index: %d\n", tree->attr.val);
+				break;
+			case VariableK:
+				fprintf(listing, "Variable:\n");
+				break;
+			case InitValListK:
+				fprintf(listing, "Initial value list:\n");
 				break;
 			default:
 				fprintf(listing, "Unknown ExpNode kind: %s\n", tree->attr.name);
