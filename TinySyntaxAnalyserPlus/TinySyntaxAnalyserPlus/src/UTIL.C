@@ -28,6 +28,7 @@ void printToken(TokenType token, const char* tokenString)
 	case FLOAT:
 	case VOID:
 	case DEF:
+	case CALL:
 		fprintf(listing,
 			"reserved word: %s\n", tokenString);
 		break;
@@ -169,14 +170,20 @@ void printTree(TreeNode* tree)
 			case WriteK:
 				fprintf(listing, "Write\n");
 				break;
-			case FunctionK:
+			case FunctionDefK:
 				fprintf(listing, "Function: %s\n", tree->attr.name);
 				break;
-			case ParameterListK:
-				fprintf(listing, "Parameter List:\n");
+			case FormalParameterListK:
+				fprintf(listing, "Formal parameter list:\n");
 				break;
-			case Parameter:
-				fprintf(listing, "Parameter:\n");
+			case FormalParameter:
+				fprintf(listing, "Formal parameter:\n");
+				break;
+			case FunctionCallK:
+				fprintf(listing, "Function call: %s\n", tree->attr.name);
+				break;
+			case ActualParameterListK:
+				fprintf(listing, "Actual parameter List:\n");
 				break;
 			default:
 				fprintf(listing, "Unknown ExpNode kind\n");
@@ -199,8 +206,11 @@ void printTree(TreeNode* tree)
 			case TypeK:
 				fprintf(listing, "Value type: %s\n", tree->attr.name);
 				break;
+			case ActualParameter:
+				fprintf(listing, "Actual parameter: %s\n", tree->attr.name);
+				break;
 			default:
-				fprintf(listing, "Unknown ExpNode kind\n");
+				fprintf(listing, "Unknown ExpNode kind: %s\n", tree->attr.name);
 				break;
 			}
 		}

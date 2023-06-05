@@ -25,8 +25,11 @@ static TreeNode* simple_exp(void);
 static TreeNode* term(void);
 static TreeNode* factor(void);
 static TreeNode* function_def(void);
-static TreeNode* parameter_list(void);
-static TreeNode* parameter(void);
+static TreeNode* formal_parameter_list(void);
+static TreeNode* formal_parameter(void);
+static TreeNode* function_call(void);
+static TreeNode* actual_parameter_list(void);
+static TreeNode* actual_parameter(void);
 
 static void syntaxError(char* message)
 {
@@ -81,6 +84,7 @@ TreeNode* statement(void)
 	case READ: t = read_stmt(); break;
 	case WRITE: t = write_stmt(); break;
 	case DEF: t = function_def(); break;
+	case CALL: t = function_call(); break;
 	default: syntaxError("unexpected token -> ");
 		printToken(token, tokenString);
 		token = getToken();
@@ -224,9 +228,9 @@ TreeNode* factor(void)
 	return t;
 }
 
-static TreeNode* parameter(void)
+static TreeNode* formal_parameter(void)
 {
-	TreeNode* t = newStmtNode(Parameter);
+	TreeNode* t = newStmtNode(FormalParameter);
 	if (t && (token == INT || token == FLOAT))
 	{
 		// add a lchild node for the parameter type
@@ -248,21 +252,99 @@ static TreeNode* parameter(void)
 	return t;
 }
 
-static TreeNode* parameter_list(void)
+TreeNode* function_call(void)
 {
-	TreeNode* root = newStmtNode(ParameterListK);
+	TreeNode* root = newStmtNode(FunctionCallK);
+
+	// check the memory allocation result
+	if (!root) return root;
+
+	// match the call keyword
+	match(CALL);
+
+	// match the function name
+	if (token == ID)
+	{
+		root->attr.name = copyString(tokenString);
+		match(ID);
+	}
+
+	// match the left parenthesis
+	match(LPAREN);
+
+	// match the actual parameter list
+	root->child[0] = actual_parameter_list();
+
+	// match the right parenthesis
+	match(RPAREN);
+
+	return root;
+}
+
+TreeNode* actual_parameter_list(void)
+{
+	TreeNode* root = newStmtNode(ActualParameterListK);
+
+	// check the memory allocation result
+	if (!root) return root;
+
+	// check whether the actual parameter list is empty
+	if (token == RPAREN) return root;
+
+	// match the first actual parameter
+	root->child[0] = actual_parameter();
+
+	// match all actual parameters
+	TreeNode* currentNode = root->child[0];
+	while (token == COMMA)
+	{
+		match(COMMA);
+		if (currentNode)
+		{
+			currentNode->sibling = actual_parameter();
+			currentNode = currentNode->sibling;
+		}
+	}
+	if (token != RPAREN)
+		syntaxError("Actual parameters should be seperated by commas.");
+
+	return root;
+}
+
+TreeNode* actual_parameter(void)
+{
+	TreeNode* root = newExpNode(ActualParameter);
+
+	// check the memory allocation result
+	if (!root) return root;
+
+	// match an actual parameter
+	if (token == ID || token == FLOATNUM || token == SCIENTIFIC_NOTATION || token == NUM)
+	{
+		root->attr.name = copyString(tokenString);
+		match(token);
+	}
+	else
+		syntaxError("Actual parameters should be id, float number, scientific notations, or integers.");
+
+	return root;
+}
+
+static TreeNode* formal_parameter_list(void)
+{
+	TreeNode* root = newStmtNode(FormalParameterListK);
 
 	// check whether the parameter list is empty
 	if (token != RPAREN)
 	{
 		if (root)
 		{
-			root->child[0] = parameter();
+			root->child[0] = formal_parameter();
 			TreeNode* currentNode = root->child[0];
 			while (currentNode && token == COMMA)
 			{
 				match(COMMA);
-				currentNode->sibling = parameter();
+				currentNode->sibling = formal_parameter();
 				currentNode = currentNode->sibling;
 			}
 		}
@@ -273,7 +355,7 @@ static TreeNode* parameter_list(void)
 
 static TreeNode* function_def(void)
 {
-	TreeNode* root = newStmtNode(FunctionK);
+	TreeNode* root = newStmtNode(FunctionDefK);
 
 	// check whether memory allocation is successful
 	if (!root) return root;
@@ -310,7 +392,7 @@ static TreeNode* function_def(void)
 	match(LPAREN);
 
 	// match the parameter list
-	root->child[1] = parameter_list();
+	root->child[1] = formal_parameter_list();
 
 	// match the right parenthesis of the parameter list
 	match(RPAREN);
