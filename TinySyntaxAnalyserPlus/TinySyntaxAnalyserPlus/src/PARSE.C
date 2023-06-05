@@ -214,10 +214,7 @@ TreeNode* factor(void)
 		match(NUM);
 		break;
 	case ID:
-		t = newExpNode(IdK);
-		if ((t != NULL) && (token == ID))
-			t->attr.name = copyString(tokenString);
-		match(ID);
+		t = start_with_id();
 		break;
 	case LPAREN:
 		match(LPAREN);
