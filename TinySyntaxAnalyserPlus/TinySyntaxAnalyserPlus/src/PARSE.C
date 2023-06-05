@@ -24,6 +24,9 @@ static TreeNode* exp(void);
 static TreeNode* simple_exp(void);
 static TreeNode* term(void);
 static TreeNode* factor(void);
+static TreeNode* function_def(void);
+static TreeNode* parameter_list(void);
+static TreeNode* parameter(void);
 
 static void syntaxError(char* message)
 {
@@ -50,7 +53,11 @@ TreeNode* stmt_sequence(void)
 		(token != ELSE) && (token != UNTIL))
 	{
 		TreeNode* q;
-		match(SEMI);
+
+		if (token == SEMI) match(SEMI);
+		else if (token == RBRACE) return t;
+		else syntaxError("Expect a ';' or '}' in the statement sequence.");
+		
 		q = statement();
 		if (q != NULL) {
 			if (t == NULL) t = p = q;
@@ -73,6 +80,7 @@ TreeNode* statement(void)
 	case ID: t = assign_stmt(); break;
 	case READ: t = read_stmt(); break;
 	case WRITE: t = write_stmt(); break;
+	case INT: t = function_def(); break;
 	default: syntaxError("unexpected token -> ");
 		printToken(token, tokenString);
 		token = getToken();
@@ -214,6 +222,106 @@ TreeNode* factor(void)
 		break;
 	}
 	return t;
+}
+
+static TreeNode* parameter(void)
+{
+	TreeNode* t = newStmtNode(Parameter);
+	if (t && (token == INT || token == FLOAT))
+	{
+		// add a lchild node for the parameter type
+		t->child[0] = newExpNode(TypeK);
+		t->child[0]->attr.name = copyString(tokenString);
+		match(token);
+
+		// add a rchild node for the parameter name
+		if (token == ID)
+		{
+			t->child[1] = newExpNode(IdK);
+			t->child[1]->attr.name = copyString(tokenString);
+			match(ID);
+		}
+		else syntaxError("Expect an identifier.");
+	}
+	else syntaxError("The parameter type should be either int or float.");
+
+	return t;
+}
+
+static TreeNode* parameter_list(void)
+{
+	TreeNode* root = newStmtNode(ParameterListK);
+
+	// check whether the parameter list is empty
+	if (token != RPAREN)
+	{
+		if (root)
+		{
+			root->child[0] = parameter();
+			TreeNode* currentNode = root->child[0];
+			while (currentNode && token == COMMA)
+			{
+				match(COMMA);
+				currentNode->sibling = parameter();
+				currentNode = currentNode->sibling;
+			}
+		}
+	}
+
+	return root;
+}
+
+static TreeNode* function_def(void)
+{
+	TreeNode* root = newStmtNode(FunctionK);
+
+	// check whether memory allocation is successful
+	if (!root) return root;
+
+	// match the type of the function return value
+	if (token == INT || token == FLOAT || token == VOID)
+	{
+		root->child[0] = newExpNode(TypeK);
+		root->child[0]->attr.name = copyString(tokenString);
+		match(token);
+	}
+	else
+	{
+		syntaxError("Expected the type of the return value.");
+		return root;
+	}
+
+	// match the function name
+	if (token == ID)
+	{
+		root->attr.name = copyString(tokenString);
+		match(ID);
+	}
+	else
+	{
+		syntaxError("Expected the identifier of the function.");
+		return root;
+	}
+
+	// match the left parenthesis of the parameter list
+	match(LPAREN);
+
+	// match the parameter list
+	root->child[1] = parameter_list();
+
+	// match the right parenthesis of the parameter list
+	match(RPAREN);
+
+	// match the left brace of the function body
+	match(LBRACE);
+
+	// match the function body
+	root->child[2] = stmt_sequence();
+
+	// match the right brace of the function body
+	match(RBRACE);
+
+	return root;
 }
 
 /****************************************/

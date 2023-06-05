@@ -23,18 +23,18 @@
 #endif
 
 /* MAXRESERVED = the number of reserved words */
-#define MAXRESERVED 8
+#define MAXRESERVED 11
 
 typedef enum
 /* book-keeping tokens */
 {
 	ENDFILE, ERROR,
 	/* reserved words */
-	IF, THEN, ELSE, END, REPEAT, UNTIL, READ, WRITE,
+	IF, THEN, ELSE, END, REPEAT, UNTIL, READ, WRITE, INT, FLOAT, VOID,
 	/* multicharacter tokens */
 	ID, NUM, FLOATNUM, SCIENTIFIC_NOTATION,
 	/* special symbols */
-	ASSIGN, EQ, LT, PLUS, MINUS, TIMES, OVER, LPAREN, RPAREN, SEMI
+	ASSIGN, EQ, LT, PLUS, MINUS, TIMES, OVER, LPAREN, RPAREN, LBRACE, RBRACE, SEMI, COMMA
 } TokenType;
 
 extern FILE* source; /* source code text file */
@@ -48,8 +48,8 @@ extern int lineno; /* source line number for listing */
 /**************************************************/
 
 typedef enum { StmtK, ExpK } NodeKind;
-typedef enum { IfK, RepeatK, AssignK, ReadK, WriteK, FunctionK } StmtKind;
-typedef enum { OpK, ConstK, IdK, CallK } ExpKind;
+typedef enum { IfK, RepeatK, AssignK, ReadK, WriteK, FunctionK, ParameterListK, Parameter } StmtKind;
+typedef enum { OpK, ConstK, TypeK, IdK, CallK } ExpKind;
 
 /* ExpType is used for type checking */
 typedef enum { Void, Integer, Boolean, Float } ExpType;
