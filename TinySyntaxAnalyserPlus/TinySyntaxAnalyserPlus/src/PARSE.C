@@ -80,6 +80,7 @@ TreeNode* statement(void)
 	case ID: t = assign_stmt(); break;
 	case READ: t = read_stmt(); break;
 	case WRITE: t = write_stmt(); break;
+	case DEF: t = function_def(); break;
 	default: syntaxError("unexpected token -> ");
 		printToken(token, tokenString);
 		token = getToken();
@@ -276,6 +277,9 @@ static TreeNode* function_def(void)
 
 	// check whether memory allocation is successful
 	if (!root) return root;
+
+	// match the def keyword
+	match(DEF);
 
 	// match the type of the function return value
 	if (token == INT || token == FLOAT || token == VOID)
