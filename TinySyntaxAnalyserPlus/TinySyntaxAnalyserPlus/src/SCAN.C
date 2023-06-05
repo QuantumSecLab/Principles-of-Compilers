@@ -76,7 +76,7 @@ static struct
 } reservedWords[MAXRESERVED]
 = { {"if",IF},{"then",THEN},{"else",ELSE},{"end",END},
    {"repeat",REPEAT},{"until",UNTIL},{"read",READ},
-   {"write",WRITE},{"int",INT},{"float",FLOAT},{"void",VOID},{"def",DEF},{"call",CALL}};
+   {"write",WRITE},{"int",INT},{"float",FLOAT},{"void",VOID}};
 
 /* lookup an identifier to see if it is a reserved word */
 /* uses linear search */
@@ -163,6 +163,12 @@ TokenType getToken(void)
 					break;
 				case '}':
 					currentToken = RBRACE;
+					break;
+				case '[':
+					currentToken = LBOX;
+					break;
+				case ']':
+					currentToken = RBOX;
 					break;
 				case ';':
 					currentToken = SEMI;

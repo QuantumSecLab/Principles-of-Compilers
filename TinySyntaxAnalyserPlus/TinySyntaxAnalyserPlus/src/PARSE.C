@@ -17,19 +17,23 @@ static TreeNode* stmt_sequence(void);
 static TreeNode* statement(void);
 static TreeNode* if_stmt(void);
 static TreeNode* repeat_stmt(void);
-static TreeNode* assign_stmt(void);
+static TreeNode* assign_stmt(char* id);
 static TreeNode* read_stmt(void);
 static TreeNode* write_stmt(void);
 static TreeNode* exp(void);
 static TreeNode* simple_exp(void);
 static TreeNode* term(void);
 static TreeNode* factor(void);
-static TreeNode* function_def(void);
+static TreeNode* function_def(char* type, char* id);
 static TreeNode* formal_parameter_list(void);
 static TreeNode* formal_parameter(void);
-static TreeNode* function_call(void);
+static TreeNode* function_call(char* id);
 static TreeNode* actual_parameter_list(void);
 static TreeNode* actual_parameter(void);
+static TreeNode* start_with_id(void);
+static TreeNode* start_with_type(void);
+static TreeNode* array_reference(char* id);
+static TreeNode* variable_declaration(char* type, char* id);
 
 static void syntaxError(char* message)
 {
@@ -80,11 +84,12 @@ TreeNode* statement(void)
 	switch (token) {
 	case IF: t = if_stmt(); break;
 	case REPEAT: t = repeat_stmt(); break;
-	case ID: t = assign_stmt(); break;
+	case ID: t = start_with_id(); break;
 	case READ: t = read_stmt(); break;
 	case WRITE: t = write_stmt(); break;
-	case DEF: t = function_def(); break;
-	case CALL: t = function_call(); break;
+	case INT:
+	case FLOAT:
+		t = start_with_type(); break;
 	default: syntaxError("unexpected token -> ");
 		printToken(token, tokenString);
 		token = getToken();
@@ -118,12 +123,11 @@ TreeNode* repeat_stmt(void)
 	return t;
 }
 
-TreeNode* assign_stmt(void)
+TreeNode* assign_stmt(char* id)
 {
 	TreeNode* t = newStmtNode(AssignK);
-	if ((t != NULL) && (token == ID))
-		t->attr.name = copyString(tokenString);
-	match(ID);
+	if ((t != NULL))
+		t->attr.name = copyString(id);
 	match(ASSIGN);
 	if (t != NULL) t->child[0] = exp();
 	return t;
@@ -252,22 +256,15 @@ static TreeNode* formal_parameter(void)
 	return t;
 }
 
-TreeNode* function_call(void)
+TreeNode* function_call(char* id)
 {
 	TreeNode* root = newStmtNode(FunctionCallK);
 
 	// check the memory allocation result
 	if (!root) return root;
 
-	// match the call keyword
-	match(CALL);
-
-	// match the function name
-	if (token == ID)
-	{
-		root->attr.name = copyString(tokenString);
-		match(ID);
-	}
+	// assign the function name
+	root->attr.name = copyString(id);
 
 	// match the left parenthesis
 	match(LPAREN);
@@ -330,6 +327,76 @@ TreeNode* actual_parameter(void)
 	return root;
 }
 
+TreeNode* start_with_id(void)
+{
+	TreeNode* root = NULL;
+
+	// save the id literal and match the id
+	char idBackup[MAXTOKENLEN + 1] = "";
+	memcpy(idBackup, tokenString, strlen(tokenString));
+	match(ID);
+
+	// function call, assign expression, or array reference
+	if (token == LPAREN)
+		root = function_call(idBackup);
+	else if (token == ASSIGN)
+		root = assign_stmt(idBackup);
+	else if (token == LBOX)
+		root = array_reference(idBackup);
+	else
+		syntaxError("missing '(', ':=', or '['.");
+
+	return root;
+}
+
+TreeNode* start_with_type(void)
+{
+	TreeNode* root = NULL;
+	char typeBackup[MAXTOKENLEN + 1] = "";
+	char idBackup[MAXTOKENLEN + 1] = "";
+
+	// void is only allowed in the function return value type
+	if (token == VOID)
+	{
+		memcpy(typeBackup, tokenString, strlen(tokenString));
+		match(token);
+		memcpy(idBackup, tokenString, strlen(tokenString));
+		match(token);
+		root = function_def(typeBackup, idBackup);
+	}
+	else if (token == INT || token == FLOAT)
+	{
+		memcpy(typeBackup, tokenString, strlen(tokenString));
+		match(token);
+		memcpy(idBackup, tokenString, strlen(tokenString));
+		match(token);
+
+		if (token == LPAREN)
+			root = function_def(typeBackup, idBackup);
+		else
+			root = variable_declaration(typeBackup, idBackup);
+	}
+	else
+		syntaxError("Unknown error. An type reserved word is expected.");
+
+
+	return root;
+}
+
+TreeNode* array_reference(char* id)
+{
+	TreeNode* root;
+
+	return root;
+}
+
+TreeNode* variable_declaration(char* type, char* id)
+{
+	TreeNode* root;
+
+	return root;
+}
+
 static TreeNode* formal_parameter_list(void)
 {
 	TreeNode* root = newStmtNode(FormalParameterListK);
@@ -353,40 +420,19 @@ static TreeNode* formal_parameter_list(void)
 	return root;
 }
 
-static TreeNode* function_def(void)
+static TreeNode* function_def(char* type, char* id)
 {
 	TreeNode* root = newStmtNode(FunctionDefK);
 
 	// check whether memory allocation is successful
 	if (!root) return root;
 
-	// match the def keyword
-	match(DEF);
+	// assign the type of the function return value
+	root->child[0] = newExpNode(TypeK);
+	root->child[0]->attr.name = copyString(type);
 
-	// match the type of the function return value
-	if (token == INT || token == FLOAT || token == VOID)
-	{
-		root->child[0] = newExpNode(TypeK);
-		root->child[0]->attr.name = copyString(tokenString);
-		match(token);
-	}
-	else
-	{
-		syntaxError("Expected the type of the return value.");
-		return root;
-	}
-
-	// match the function name
-	if (token == ID)
-	{
-		root->attr.name = copyString(tokenString);
-		match(ID);
-	}
-	else
-	{
-		syntaxError("Expected the identifier of the function.");
-		return root;
-	}
+	// assign the function name
+	root->attr.name = copyString(id);
 
 	// match the left parenthesis of the parameter list
 	match(LPAREN);

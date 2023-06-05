@@ -23,7 +23,7 @@
 #endif
 
 /* MAXRESERVED = the number of reserved words */
-#define MAXRESERVED 13
+#define MAXRESERVED 11
 
 typedef enum
 /* book-keeping tokens */
@@ -34,7 +34,7 @@ typedef enum
 	/* multicharacter tokens */
 	ID, NUM, FLOATNUM, SCIENTIFIC_NOTATION,
 	/* special symbols */
-	ASSIGN, EQ, LT, PLUS, MINUS, TIMES, OVER, LPAREN, RPAREN, LBRACE, RBRACE, SEMI, COMMA
+	ASSIGN, EQ, LT, PLUS, MINUS, TIMES, OVER, LPAREN, RPAREN, LBRACE, RBRACE, LBOX, RBOX, SEMI, COMMA
 } TokenType;
 
 extern FILE* source; /* source code text file */

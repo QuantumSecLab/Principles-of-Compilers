@@ -27,8 +27,6 @@ void printToken(TokenType token, const char* tokenString)
 	case INT:
 	case FLOAT:
 	case VOID:
-	case DEF:
-	case CALL:
 		fprintf(listing,
 			"reserved word: %s\n", tokenString);
 		break;
@@ -39,6 +37,8 @@ void printToken(TokenType token, const char* tokenString)
 	case RPAREN: fprintf(listing, ")\n"); break;
 	case LBRACE: fprintf(listing, "{\n"); break;
 	case RBRACE: fprintf(listing, "}\n"); break;
+	case LBOX: fprintf(listing, "[\n"); break;
+	case RBOX: fprintf(listing, "]\n"); break;
 	case SEMI: fprintf(listing, ";\n"); break;
 	case PLUS: fprintf(listing, "+\n"); break;
 	case MINUS: fprintf(listing, "-\n"); break;
@@ -171,7 +171,7 @@ void printTree(TreeNode* tree)
 				fprintf(listing, "Write\n");
 				break;
 			case FunctionDefK:
-				fprintf(listing, "Function: %s\n", tree->attr.name);
+				fprintf(listing, "Function definition: %s\n", tree->attr.name);
 				break;
 			case FormalParameterListK:
 				fprintf(listing, "Formal parameter list:\n");
