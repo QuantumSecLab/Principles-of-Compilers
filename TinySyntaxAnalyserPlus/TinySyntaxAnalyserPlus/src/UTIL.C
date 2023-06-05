@@ -179,9 +179,6 @@ void printTree(TreeNode* tree)
 			case FormalParameter:
 				fprintf(listing, "Formal parameter:\n");
 				break;
-			case FunctionCallK:
-				fprintf(listing, "Function call: %s\n", tree->attr.name);
-				break;
 			case ActualParameterListK:
 				fprintf(listing, "Actual parameter List:\n");
 				break;
@@ -205,6 +202,9 @@ void printTree(TreeNode* tree)
 				break;
 			case TypeK:
 				fprintf(listing, "Value type: %s\n", tree->attr.name);
+				break;
+			case CallK:
+				fprintf(listing, "Function call: %s\n", tree->attr.name);
 				break;
 			case ActualParameter:
 				fprintf(listing, "Actual parameter: %s\n", tree->attr.name);

@@ -256,7 +256,7 @@ static TreeNode* formal_parameter(void)
 
 TreeNode* function_call(char* id)
 {
-	TreeNode* root = newStmtNode(FunctionCallK);
+	TreeNode* root = newExpNode(CallK);
 
 	// check the memory allocation result
 	if (!root) return root;
@@ -341,7 +341,10 @@ TreeNode* start_with_id(void)
 	else if (token == LBOX)
 		root = array_reference(idBackup);
 	else
-		syntaxError("missing '(', ':=', or '['.");
+	{
+		root = newExpNode(IdK);
+		root->attr.name = idBackup;
+	}
 
 	return root;
 }
