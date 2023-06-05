@@ -33,6 +33,7 @@ static TreeNode* actual_parameter(void);
 static TreeNode* start_with_id(void);
 static TreeNode* start_with_type(void);
 static TreeNode* array_reference(char* id);
+static TreeNode* array_index(void);
 static TreeNode* variable_declaration(char* type, char* id);
 
 static void syntaxError(char* message)
@@ -332,8 +333,7 @@ TreeNode* start_with_id(void)
 	TreeNode* root = NULL;
 
 	// save the id literal and match the id
-	char idBackup[MAXTOKENLEN + 1] = "";
-	memcpy(idBackup, tokenString, strlen(tokenString));
+	char* idBackup = copyString(tokenString);
 	match(ID);
 
 	// function call, assign expression, or array reference
@@ -352,23 +352,24 @@ TreeNode* start_with_id(void)
 TreeNode* start_with_type(void)
 {
 	TreeNode* root = NULL;
-	char typeBackup[MAXTOKENLEN + 1] = "";
-	char idBackup[MAXTOKENLEN + 1] = "";
+	char* typeBackup = NULL;
+	char* idBackup = NULL;
 
 	// void is only allowed in the function return value type
+	// function call or assign expressions
 	if (token == VOID)
 	{
-		memcpy(typeBackup, tokenString, strlen(tokenString));
+		typeBackup = copyString(tokenString);
 		match(token);
-		memcpy(idBackup, tokenString, strlen(tokenString));
+		idBackup = copyString(tokenString);
 		match(token);
 		root = function_def(typeBackup, idBackup);
 	}
 	else if (token == INT || token == FLOAT)
 	{
-		memcpy(typeBackup, tokenString, strlen(tokenString));
+		typeBackup = copyString(tokenString);
 		match(token);
-		memcpy(idBackup, tokenString, strlen(tokenString));
+		idBackup = copyString(tokenString);
 		match(token);
 
 		if (token == LPAREN)
@@ -379,20 +380,57 @@ TreeNode* start_with_type(void)
 	else
 		syntaxError("Unknown error. An type reserved word is expected.");
 
-
 	return root;
 }
 
 TreeNode* array_reference(char* id)
 {
-	TreeNode* root;
+	TreeNode* root = newExpNode(ArrayRef);
+
+	// check memory allocation
+	if (!root) return root;
+
+	// assign id literal
+	root->attr.name = copyString(id);
+
+	// match array index
+	root->child[0] = array_index();
+
+	return root;
+}
+
+TreeNode* array_index(void)
+{
+	TreeNode* root = newExpNode(ArrayIndex);
+
+	// check memory allocation
+	if (!root) return root;
+
+	// match the left box bracket
+	match(LBOX);
+
+	// match an integer
+	if (token == NUM)
+	{
+		sscanf(tokenString, "%d", &(root->attr.val));
+		match(NUM);
+	}
+	else
+		syntaxError("Array index should be an integer.");
+
+	// match the right box bracket
+	match(RBOX);
+
+	// match the index for higher dimension if exists
+	if (token == LBOX)
+		root->sibling = array_index();
 
 	return root;
 }
 
 TreeNode* variable_declaration(char* type, char* id)
 {
-	TreeNode* root;
+	TreeNode* root = NULL;
 
 	return root;
 }

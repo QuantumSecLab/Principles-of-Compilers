@@ -30,7 +30,7 @@ typedef enum
 {
 	ENDFILE, ERROR,
 	/* reserved words */
-	IF, THEN, ELSE, END, REPEAT, UNTIL, READ, WRITE, INT, FLOAT, VOID, DEF, CALL,
+	IF, THEN, ELSE, END, REPEAT, UNTIL, READ, WRITE, INT, FLOAT, VOID,
 	/* multicharacter tokens */
 	ID, NUM, FLOATNUM, SCIENTIFIC_NOTATION,
 	/* special symbols */
@@ -51,7 +51,8 @@ typedef enum { StmtK, ExpK } NodeKind;
 typedef enum { IfK, RepeatK, AssignK, ReadK, WriteK, FunctionDefK, 
                FormalParameterListK, FormalParameter, FunctionCallK,
                ActualParameterListK } StmtKind;
-typedef enum { OpK, ConstK, TypeK, IdK, CallK, ActualParameter} ExpKind;
+typedef enum { OpK, ConstK, TypeK, IdK, CallK, ActualParameter, 
+               ArrayRef, ArrayIndex } ExpKind;
 
 /* ExpType is used for type checking */
 typedef enum { Void, Integer, Boolean, Float } ExpType;

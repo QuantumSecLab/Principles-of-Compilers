@@ -209,6 +209,12 @@ void printTree(TreeNode* tree)
 			case ActualParameter:
 				fprintf(listing, "Actual parameter: %s\n", tree->attr.name);
 				break;
+			case ArrayRef:
+				fprintf(listing, "Array reference: %s\n", tree->attr.name);
+				break;
+			case ArrayIndex:
+				fprintf(listing, "Array index: %d\n", tree->attr.val);
+				break;
 			default:
 				fprintf(listing, "Unknown ExpNode kind: %s\n", tree->attr.name);
 				break;
