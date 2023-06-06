@@ -210,14 +210,14 @@ TreeNode* factor(void)
 	TreeNode* t = NULL;
 	switch (token) {
 	case NUM:
-		t = newExpNode(ConstK);
+		t = newExpNode(IntConstK);
 		if ((t != NULL) && (token == NUM))
 			t->attr.val = atoi(tokenString);
 		match(NUM);
 		break;
 	case FLOATNUM:
 	case SCIENTIFIC_NOTATION:
-		t = newExpNode(ConstK);
+		t = newExpNode(FloatConstK);
 		if ((t != NULL) && (token == FLOATNUM || token == SCIENTIFIC_NOTATION))
 			sscanf(tokenString, "%lf", &(t->attr.fval));
 		match(token);
@@ -499,6 +499,8 @@ TreeNode* variable_declaration(char* type, char* id)
 
 	while (token == COMMA)
 	{
+		// match the comma
+		match(COMMA);
 		// allocate the memory and move the pointer forward
 		if (currentVariable->sibling = newExpNode(VariableK)) 
 			currentVariable = currentVariable->sibling;

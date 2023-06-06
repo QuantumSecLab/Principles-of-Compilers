@@ -202,12 +202,19 @@ TokenType getToken(void)
 				}
 				else if (isalpha(c))
 				{
-					/* backup in the input */
-					ungetNextChar();
-					save = FALSE;
-					state = DONE;
-					currentToken = ERROR;
-					fprintf(listing, "\t(%d, %d): ERROR: Invalid unsigned integer.\n", lineno - 1, linepos);
+					if (c != 'e' && c != 'E')
+					{
+						/* backup in the input */
+						ungetNextChar();
+						save = FALSE;
+						state = DONE;
+						currentToken = ERROR;
+						fprintf(listing, "\t(%d, %d): ERROR: Invalid unsigned integer.\n", lineno - 1, linepos);
+					}
+					else
+					{
+						state = IN_SCIENTIFIC_NOTATION_1;
+					}
 				}
 				else
 				{

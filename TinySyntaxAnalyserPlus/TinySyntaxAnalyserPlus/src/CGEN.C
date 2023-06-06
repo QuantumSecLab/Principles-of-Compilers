@@ -100,7 +100,7 @@ static void genExp( TreeNode * tree)
   TreeNode * p1, * p2;
   switch (tree->kind.exp) {
 
-    case ConstK :
+    case IntConstK :
       if (TraceCode) emitComment("-> Const") ;
       /* gen code to load integer constant using LDC */
       emitRM("LDC",ac,tree->attr.val,0,"load const");

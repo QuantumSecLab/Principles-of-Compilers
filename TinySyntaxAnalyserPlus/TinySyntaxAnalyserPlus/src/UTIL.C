@@ -173,6 +173,9 @@ void printTree(TreeNode* tree)
 			case FunctionDefK:
 				fprintf(listing, "Function definition: %s\n", tree->attr.name);
 				break;
+			case VarDeclarationK:
+				fprintf(listing, "Variable declaration:\n");
+				break;
 			default:
 				fprintf(listing, "Unknown ExpNode kind\n");
 				break;
@@ -185,8 +188,11 @@ void printTree(TreeNode* tree)
 				fprintf(listing, "Op: ");
 				printToken(tree->attr.op, "\0");
 				break;
-			case ConstK:
-				fprintf(listing, "Const: %d\n", tree->attr.val);
+			case IntConstK:
+				fprintf(listing, "Integer const: %d\n", tree->attr.val);
+				break;
+			case FloatConstK:
+				fprintf(listing, "Float const: %lf\n", tree->attr.fval);
 				break;
 			case IdK:
 				fprintf(listing, "Id: %s\n", tree->attr.name);
