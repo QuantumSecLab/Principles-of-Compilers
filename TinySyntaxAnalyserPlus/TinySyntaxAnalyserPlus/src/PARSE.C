@@ -36,7 +36,9 @@ static TreeNode* start_with_type(void);
 static TreeNode* array_reference(char* id);
 static TreeNode* array_index(void);
 static TreeNode* variable_declaration(char* type, char* id);
+static TreeNode* variable_list(char *firstId);
 static TreeNode* initial_value_list(void);
+static void variable_list_prime(TreeNode* firstVarNode);
 
 static void syntaxError(char* message)
 {
@@ -471,38 +473,34 @@ TreeNode* variable_declaration(char* type, char* id)
 	root->child[0]->attr.name = type;
 
 	// match the variable list
+	root->child[1] = variable_list(id);
+
+	return root;
+}
+
+TreeNode* variable_list(char* firstId)
+{
+	TreeNode* root = newExpNode(VariableK);
+
+	// check the memory allocation
+	if (!root) return root;
+
+	// match the variable list
 	// assign the first id
-	TreeNode* currentVariable = NULL;
-	if (!(currentVariable = root->child[1] = newExpNode(VariableK))) return root;
+	TreeNode* currentVariable = root;
 	if (!(currentVariable->child[0] = newExpNode(IdK))) return root;
-	currentVariable->child[0]->attr.name = id;
+	currentVariable->child[0]->attr.name = firstId;
 
-	// check whether optional parts exists
-	if (token == ASSIGN)
-	{
-		match(ASSIGN);
-		currentVariable->child[1] = exp();
-	}
-	else if (token == LBOX)
-	{
-		// match the array index
-		currentVariable->child[1] = array_index();
-		// check whether optional parts exists
-		if (token == ASSIGN)
-		{
-			match(ASSIGN);
-			match(LBRACE);
-			currentVariable->child[2] = initial_value_list();
-			match(RBRACE);
-		}
-	}
+	// match the optional parts for the first variable
+	variable_list_prime(root);
 
+	// match optional variables in the variable list
 	while (token == COMMA)
 	{
 		// match the comma
 		match(COMMA);
 		// allocate the memory and move the pointer forward
-		if (currentVariable->sibling = newExpNode(VariableK)) 
+		if (currentVariable->sibling = newExpNode(VariableK))
 			currentVariable = currentVariable->sibling;
 		else
 			return root;
@@ -510,28 +508,34 @@ TreeNode* variable_declaration(char* type, char* id)
 		if (!(currentVariable->child[0] = newExpNode(IdK))) return root;
 		currentVariable->child[0]->attr.name = copyString(tokenString);
 		match(ID);
+		// match the optional parts
+		variable_list_prime(currentVariable);
+	}
+
+	return root;
+}
+
+void variable_list_prime(TreeNode* firstVarNode)
+{
+	// check whether optional parts exists
+	if (token == ASSIGN)
+	{
+		match(ASSIGN);
+		firstVarNode->child[1] = exp();
+	}
+	else if (token == LBOX)
+	{
+		// match the array index
+		firstVarNode->child[1] = array_index();
 		// check whether optional parts exists
 		if (token == ASSIGN)
 		{
 			match(ASSIGN);
-			currentVariable->child[1] = exp();
-		}
-		else if (token == LBOX)
-		{
-			// match the array index
-			currentVariable->child[1] = array_index();
-			// check whether optional parts exists
-			if (token == ASSIGN)
-			{
-				match(ASSIGN);
-				match(LBRACE);
-				currentVariable->child[2] = initial_value_list();
-				match(RBRACE);
-			}
+			match(LBRACE);
+			firstVarNode->child[2] = initial_value_list();
+			match(RBRACE);
 		}
 	}
-
-	return root;
 }
 
 TreeNode* initial_value_list(void)
