@@ -27,6 +27,7 @@ void printToken(TokenType token, const char* tokenString)
 	case INT:
 	case FLOAT:
 	case VOID:
+	case RETURN:
 		fprintf(listing,
 			"reserved word: %s\n", tokenString);
 		break;
@@ -176,6 +177,9 @@ void printTree(TreeNode* tree)
 			case VarDeclarationK:
 				fprintf(listing, "Variable declaration:\n");
 				break;
+			case ReturnK:
+				fprintf(listing, "Return:\n");
+				break;
 			default:
 				fprintf(listing, "Unknown ExpNode kind\n");
 				break;
@@ -211,9 +215,6 @@ void printTree(TreeNode* tree)
 				break;
 			case ActualParameterListK:
 				fprintf(listing, "Actual parameter List:\n");
-				break;
-			case ActualParameterK:
-				fprintf(listing, "Actual parameter: %s\n", tree->attr.name);
 				break;
 			case ArrayRefK:
 				fprintf(listing, "Array reference: %s\n", tree->attr.name);

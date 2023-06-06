@@ -20,6 +20,7 @@ static TreeNode* repeat_stmt(void);
 static TreeNode* assign_stmt(char* id);
 static TreeNode* read_stmt(void);
 static TreeNode* write_stmt(void);
+static TreeNode* return_stmt(void);
 static TreeNode* exp(void);
 static TreeNode* simple_exp(void);
 static TreeNode* term(void);
@@ -92,6 +93,7 @@ TreeNode* statement(void)
 	case ID: t = start_with_id(); break;
 	case READ: t = read_stmt(); break;
 	case WRITE: t = write_stmt(); break;
+	case RETURN: t = return_stmt(); break;
 	case INT:
 	case FLOAT:
 		t = start_with_type(); break;
@@ -154,6 +156,25 @@ TreeNode* write_stmt(void)
 	match(WRITE);
 	if (t != NULL) t->child[0] = exp();
 	return t;
+}
+
+TreeNode* return_stmt(void)
+{
+	TreeNode* root = newStmtNode(ReturnK);
+
+	// check memory allocation
+	if (!root) return root;
+
+	// match the keyword
+	if (token == RETURN)
+	{
+		match(RETURN);
+		root->child[0] = exp();
+	}
+	else
+		syntaxError("An return statement is expected.");
+
+	return root;
 }
 
 TreeNode* exp(void)
@@ -341,19 +362,13 @@ TreeNode* actual_parameter_list(void)
 
 TreeNode* actual_parameter(void)
 {
-	TreeNode* root = newExpNode(ActualParameterK);
-
-	// check the memory allocation result
-	if (!root) return root;
+	TreeNode* root = NULL;
 
 	// match an actual parameter
 	if (token == ID || token == FLOATNUM || token == SCIENTIFIC_NOTATION || token == NUM)
-	{
-		root->attr.name = copyString(tokenString);
-		match(token);
-	}
+		root = exp();
 	else
-		syntaxError("Actual parameters should be id, float number, scientific notations, or integers.");
+		syntaxError("Actual parameters should be an expression.");
 
 	return root;
 }
@@ -492,7 +507,7 @@ TreeNode* variable_list(char* firstId)
 	currentVariable->child[0]->attr.name = firstId;
 
 	// match the optional parts for the first variable
-	variable_list_prime(root);
+	variable_list_prime(currentVariable);
 
 	// match optional variables in the variable list
 	while (token == COMMA)
