@@ -294,11 +294,10 @@ static TreeNode* formal_parameter(void)
 		t->child[0]->attr.name = copyString(tokenString);
 		match(token);
 
-		// add a rchild node for the parameter name
+		// add the parameter name
 		if (token == ID)
 		{
-			t->child[1] = newExpNode(IdK);
-			t->child[1]->attr.name = copyString(tokenString);
+			t->attr.name = copyString(tokenString);
 			match(ID);
 		}
 		else syntaxError("Expect an identifier.");
@@ -332,19 +331,16 @@ TreeNode* function_call(char* id)
 
 TreeNode* actual_parameter_list(void)
 {
-	TreeNode* root = newExpNode(ActualParameterListK);
-
-	// check the memory allocation result
-	if (!root) return root;
+	TreeNode* root = NULL;
 
 	// check whether the actual parameter list is empty
 	if (token == RPAREN) return root;
 
 	// match the first actual parameter
-	root->child[0] = actual_parameter();
+	root = actual_parameter();
 
 	// match all actual parameters
-	TreeNode* currentNode = root->child[0];
+	TreeNode* currentNode = root;
 	while (token == COMMA)
 	{
 		match(COMMA);
@@ -460,7 +456,10 @@ TreeNode* array_index(void)
 	// match an integer
 	if (token == NUM)
 	{
-		sscanf(tokenString, "%d", &(root->attr.val));
+		if (root->child[0] = newExpNode(IntConstK))
+			sscanf(tokenString, "%d", &(root->child[0]->attr.val));
+		else
+			return root;
 		match(NUM);
 	}
 	else
@@ -471,7 +470,7 @@ TreeNode* array_index(void)
 
 	// match the index for higher dimension if exists
 	if (token == LBOX)
-		root->sibling = array_index();
+		root->child[1] = array_index();
 
 	return root;
 }
@@ -484,11 +483,10 @@ TreeNode* variable_declaration(char* type, char* id)
 	if (!root) return root;
 
 	// assign the variable type
-	root->child[0] = newExpNode(TypeK);
-	root->child[0]->attr.name = type;
+	root->attr.name = type;
 
 	// match the variable list
-	root->child[1] = variable_list(id);
+	root->child[0] = variable_list(id);
 
 	return root;
 }
@@ -503,8 +501,7 @@ TreeNode* variable_list(char* firstId)
 	// match the variable list
 	// assign the first id
 	TreeNode* currentVariable = root;
-	if (!(currentVariable->child[0] = newExpNode(IdK))) return root;
-	currentVariable->child[0]->attr.name = firstId;
+	currentVariable->attr.name = firstId;
 
 	// match the optional parts for the first variable
 	variable_list_prime(currentVariable);
@@ -520,8 +517,7 @@ TreeNode* variable_list(char* firstId)
 		else
 			return root;
 		// match the id
-		if (!(currentVariable->child[0] = newExpNode(IdK))) return root;
-		currentVariable->child[0]->attr.name = copyString(tokenString);
+		currentVariable->attr.name = copyString(tokenString);
 		match(ID);
 		// match the optional parts
 		variable_list_prime(currentVariable);
@@ -536,18 +532,18 @@ void variable_list_prime(TreeNode* firstVarNode)
 	if (token == ASSIGN)
 	{
 		match(ASSIGN);
-		firstVarNode->child[1] = exp();
+		firstVarNode->child[0] = exp();
 	}
 	else if (token == LBOX)
 	{
 		// match the array index
-		firstVarNode->child[1] = array_index();
+		firstVarNode->child[0] = array_index();
 		// check whether optional parts exists
 		if (token == ASSIGN)
 		{
 			match(ASSIGN);
 			match(LBRACE);
-			firstVarNode->child[2] = initial_value_list();
+			firstVarNode->child[1] = initial_value_list();
 			match(RBRACE);
 		}
 	}
@@ -555,14 +551,11 @@ void variable_list_prime(TreeNode* firstVarNode)
 
 TreeNode* initial_value_list(void)
 {
-	TreeNode* root = newExpNode(InitValListK);
-
-	// check the memory allocation
-	if (!root) return root;
+	TreeNode* root = NULL;
 
 	// match the first initial value
 	TreeNode* currentValueNode = NULL;
-	if (!(currentValueNode = root->child[0] = exp())) return root;
+	if (!(currentValueNode = root = exp())) return root;
 
 	// match all initial values one by one
 	while (token == COMMA)
@@ -581,23 +574,20 @@ TreeNode* initial_value_list(void)
 
 static TreeNode* formal_parameter_list(void)
 {
-	TreeNode* root = newExpNode(FormalParameterListK);
+	TreeNode* root = NULL;
 
 	// check whether the parameter list is empty
 	if (token != RPAREN)
 	{
-		if (root)
+		root = formal_parameter();
+		TreeNode* currentNode = root;
+		while (currentNode && token == COMMA)
 		{
-			root->child[0] = formal_parameter();
-			TreeNode* currentNode = root->child[0];
-			while (currentNode && token == COMMA)
-			{
-				match(COMMA);
-				currentNode->sibling = formal_parameter();
-				currentNode = currentNode->sibling;
-			}
+			match(COMMA);
+			currentNode->sibling = formal_parameter();
+			currentNode = currentNode->sibling;
 		}
-	}
+}
 
 	return root;
 }
